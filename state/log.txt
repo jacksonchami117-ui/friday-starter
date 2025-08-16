@@ -302,3 +302,8 @@ To https://github.com/jacksonchami117-ui/friday-starter
    12a504b..4f8c40d  main -> main
 
 [2025-08-16 07:17:36] === Friday Runner Finished ===
+[2025-08-16 08:51:12] === Friday Runner Started ===
+[2025-08-16 08:51:13] Applying task: Fix app.py so Flask uses the PORT environment variable from os.environ with a default of 5000.
+[2025-08-16 08:51:13] Running: git config --global user.name 'Friday AI'
+[2025-08-16 08:51:13] Running: git config --global user.email 'friday@example.com'
+[2025-08-16 08:51:13] Running: git add -A

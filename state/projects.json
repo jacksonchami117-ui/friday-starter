@@ -1,0 +1,17 @@
+[
+  {
+    "name": "Project Alpha",
+    "status": "Active",
+    "description": "Core UI polish & tokens"
+  },
+  {
+    "name": "Project Beta",
+    "status": "Completed",
+    "description": "Automation pipeline v1"
+  },
+  {
+    "name": "Project Gamma",
+    "status": "Active",
+    "description": "Docs & SOP consolidation"
+  }
+]

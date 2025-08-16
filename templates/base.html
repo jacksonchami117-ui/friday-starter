@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ title if title else "FRIDAY" }}</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body class="theme-dark">
+  <aside class="nav-rail" aria-label="Primary">
+    <div class="brand">FRIDAY</div>
+    <nav>
+      <a href="/dashboard" class="{{ 'active' if request.path.startswith('/dashboard') else '' }}">Dashboard</a>
+      <a href="/projects"  class="{{ 'active' if request.path.startswith('/projects') else '' }}">Projects</a>
+      <a href="/sops"      class="{{ 'active' if request.path.startswith('/sops') else '' }}">SOPs</a>
+      <a href="/decisions" class="{{ 'active' if request.path.startswith('/decisions') else '' }}">Decisions</a>
+      <a href="/runs"      class="{{ 'active' if request.path.startswith('/runs') else '' }}">Runs</a>
+      <a href="/settings"  class="{{ 'active' if request.path.startswith('/settings') else '' }}">Settings</a>
+    </nav>
+    <div class="copyright">© 2025 FRIDAY</div>
+  </aside>
+  <main class="content" role="main">
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

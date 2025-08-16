@@ -1,0 +1,14 @@
+[
+  {
+    "title": "SOP-200 Retention System",
+    "description": "Banners, milestones, nudges"
+  },
+  {
+    "title": "SOP-201 Product Structure",
+    "description": "Layouts, spacing, navigation"
+  },
+  {
+    "title": "SOP-205 Audit Loop",
+    "description": "Visual/A11y/Perf loop"
+  }
+]

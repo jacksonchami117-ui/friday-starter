@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ title }}</h1>
+<div class="list">
+  {% for item in items %}
+  <div class="list-item">
+    <div class="title">{{ item.title or item.name or ('#' ~ loop.index) }}</div>
+    {% if item.description %}<div class="muted">{{ item.description }}</div>{% endif %}
+    {% if item.status %}<div class="muted">Status: {{ item.status }}</div>{% endif %}
+    {% if item.date %}<div class="muted">Date: {{ item.date }}</div>{% endif %}
+  </div>
+  {% else %}
+    <div class="muted">No entries yet.</div>
+  {% endfor %}
+</div>
+{% endblock %}

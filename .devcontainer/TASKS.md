@@ -1,0 +1,1 @@
+- Add an About page at /about with a short description "This is Friday, an autonomous AI agent that edits, commits, and deploys code."

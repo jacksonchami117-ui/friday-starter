@@ -1,1 +1,1 @@
-// Rate limiting logic placeholder
+// Rate limiting placeholder

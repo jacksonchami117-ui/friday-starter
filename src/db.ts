@@ -1,1 +1,1 @@
-// DB connection placeholder
+// Database connection placeholder

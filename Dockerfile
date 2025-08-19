@@ -5,7 +5,11 @@ FROM python:3.11-slim
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
+# Set working directory
 WORKDIR /app
+
+# Make sure Python can always find your src/ package
+ENV PYTHONPATH=/app
 
 # Install system dependencies (needed for pandas, psycopg2, ffmpeg, etc.)
 RUN apt-get update && \
@@ -27,6 +31,5 @@ COPY . .
 ENV PORT=8000
 EXPOSE 8000
 
-# Run Gunicorn with the Flask app inside app.py
-# IMPORTANT: app.py must define "app = Flask(__name__)" at the bottom
+# Run Gunicorn with the Flask app
 CMD ["sh", "-c", "gunicorn app:app --bind 0.0.0.0:${PORT}"]

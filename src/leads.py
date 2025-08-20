@@ -23,6 +23,7 @@ COLUMN_MAP = {
 }
 
 def normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """Rename messy headers like 'First Name' -> 'First'"""
     new_cols = []
     for c in df.columns:
         key = c.strip().lower()
@@ -58,7 +59,7 @@ def leads_home():
 
         df = normalize_columns(df)
 
-        # Save accepted leads only (no rejection logic yet)
+        # Save accepted leads only
         df.to_csv(accepted_path, index=False)
 
         flash(f"Imported {len(df)} leads.", "success")

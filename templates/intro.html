@@ -1,10 +1,74 @@
-{% extends "base.html" %}
-{% block content %}
-<section class="intro full">
-  <div class="scanlines"></div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Launching F.R.I.D.A.Y...</title>
+  <style>
+    body {
+      background-color: #0d0d0d;
+      color: #00ff99;
+      font-family: monospace;
+      white-space: pre;
+      padding: 20px;
+    }
+    .center {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      height: 100vh;
+    }
+  </style>
+</head>
+<body>
   <div class="center">
-    <pre class="console" id="console"></pre>
+    <div id="output"></div>
   </div>
-</section>
-<script src="{{ url_for('static', filename='js/intro.js') }}"></script>
-{% endblock %}
+
+  <script>
+    const lines = [
+      "15:01:25 INCOMING HTTP REQUEST DETECTED ...",
+      "15:01:28 SERVER WAKING UP ...",
+      "15:01:30 ALLOCATING RESOURCES ...",
+      "15:01:33 BOOTING CORE SYSTEMS ...",
+      "15:01:36 LAUNCHING OPERATION F.R.I.D.A.Y. ...",
+      "",
+      "███████╗██████╗ ██╗██████╗  ██╗   ██╗",
+      "██╔════╝██╔══██╗██║██╔══██╗ ╚██╗ ██╔╝",
+      "█████╗  ██████╔╝██║██████╔╝  ╚████╔╝ ",
+      "██╔══╝  ██╔═══╝ ██║██╔═══╝    ╚██╔╝  ",
+      "███████╗██║     ██║██║         ██║   ",
+      "╚══════╝╚═╝     ╚═╝╚═╝         ╚═╝   ",
+      "",
+      "F.R.I.D.A.Y. = Fast Response Integrated Deployment & Automation for You",
+      "",
+      ">>> SYSTEM ONLINE <<<",
+      ">>> READY TO DEPLOY <<<",
+      ""
+    ];
+
+    const output = document.getElementById("output");
+
+    async function typeLine(line, delay = 40) {
+      for (let i = 0; i < line.length; i++) {
+        output.innerHTML += line[i];
+        await new Promise(r => setTimeout(r, delay));
+      }
+      output.innerHTML += "\\n";
+      await new Promise(r => setTimeout(r, 300));
+    }
+
+    async function run() {
+      for (const line of lines) {
+        await typeLine(line);
+      }
+      // After intro, auto-redirect to dashboard
+      setTimeout(() => {
+        window.location.href = "/home";
+      }, 2000);
+    }
+
+    run();
+  </script>
+</body>
+</html>

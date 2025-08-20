@@ -1,0 +1,35 @@
+body.intro {
+  background: #000;
+  color: #0f0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  overflow: hidden;
+  margin: 0;
+}
+
+.scanlines {
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(rgba(0,255,0,0.08) 50%, transparent 50%);
+  background-size: 100% 3px;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+}
+
+.console {
+  font-size: 16px;
+  padding: 40px;
+  line-height: 1.5;
+  white-space: pre;
+}
+.cursor {
+  display: inline-block;
+  width: 10px;
+  background: #0f0;
+  margin-left: 4px;
+  animation: blink 1s steps(2, start) infinite;
+}
+.blink-red {
+  color: #f33;
+  animation: blink 0.8s steps(2, start) infinite;
+}
+@keyframes blink { to { visibility: hidden; } }

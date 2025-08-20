@@ -2,116 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Launching FRIDAY...</title>
-  <style>
-    body {
-      background-color: #0d0d0d;
-      color: #00ff66;
-      font-family: monospace;
-      white-space: pre;
-      padding: 20px;
-    }
-    .hidden { display: none; }
-    .cursor {
-      display: inline-block;
-      width: 10px;
-      color: #00ff66;
-      animation: blink 1s steps(2, start) infinite;
-    }
-    .blink-red {
-      color: #ff3333;
-      animation: blink 0.8s steps(2, start) infinite;
-    }
-    @keyframes blink { to { visibility: hidden; } }
-  </style>
-  <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      const logs = [
-        "INCOMING HTTP REQUEST DETECTED ...",
-        "SERVICE WAKING UP ...",
-        "ALLOCATING RESOURCES ...",
-        "BOOTING CORE SYSTEMS ...",
-        "INITIALIZING FRIDAY PROTOCOL ...",
-        "FRIDAY = Fully Responsive Intelligent Deployment & Analytics Yield",
-        "MISSION: Orchestrate agents, ship outcomes, synchronize hub systems.",
-        "PERFORMING SYSTEM DIAGNOSTICS ...",
-        "AGENT LINK ........ OK",
-        "NEURAL NET STATUS ... ONLINE",
-        "ENCRYPTION LAYER ... ACTIVE",
-        "ALL SUBSYSTEMS GREEN."
-      ];
-
-      const asciiLogo = [
-        "███████╗██████╗ ██╗██████╗  █████╗ ██╗   ██╗",
-        "██╔════╝██╔══██╗██║██╔══██╗██╔══██╗╚██╗ ██╔╝",
-        "█████╗  ██████╔╝██║██████╔╝███████║ ╚████╔╝ ",
-        "██╔══╝  ██╔══██╗██║██╔═══╝ ██╔══██║  ╚██╔╝  ",
-        "███████╗██║  ██║██║██║     ██║  ██║   ██║   ",
-        "╚══════╝╚═╝  ╚═╝╚═╝╚═╝     ╚═╝  ╚═╝   ╚═╝   "
-      ];
-
-      const output = document.body;
-      let index = 0;
-
-      function randomTimestamp() {
-        const h = String(Math.floor(Math.random() * 24)).padStart(2, "0");
-        const m = String(Math.floor(Math.random() * 60)).padStart(2, "0");
-        const s = String(Math.floor(Math.random() * 60)).padStart(2, "0");
-        return `[${h}:${m}:${s}]`;
-      }
-
-      function typeLine(text, colorClass="") {
-        return new Promise(resolve => {
-          const line = document.createElement("div");
-          if (colorClass) line.className = colorClass;
-          output.appendChild(line);
-
-          let i = 0;
-          function typeChar() {
-            if (i < text.length) {
-              line.textContent += text[i];
-              i++;
-              setTimeout(typeChar, 30);
-            } else {
-              // add green cursor at end of normal logs
-              if (!colorClass) {
-                const cursor = document.createElement("span");
-                cursor.className = "cursor";
-                cursor.textContent = "_";
-                line.appendChild(cursor);
-              }
-              resolve();
-            }
-          }
-          typeChar();
-        });
-      }
-
-      async function runSequence() {
-        for (const log of logs) {
-          await typeLine(`${randomTimestamp()} ${log}`);
-          await new Promise(r => setTimeout(r, 300));
-        }
-
-        // Show ASCII logo line by line
-        for (const row of asciiLogo) {
-          await typeLine(row);
-          await new Promise(r => setTimeout(r, 100));
-        }
-
-        await typeLine("OPERATION FRIDAY ENGAGED.", "");
-        await typeLine(">>> Launching dashboard...", "blink-red");
-
-        // Redirect after delay
-        setTimeout(() => {
-          window.location.href = "/home";
-        }, 3000);
-      }
-
-      runSequence();
-    });
-  </script>
+  <title>Operation F.R.I.D.A.Y.</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/intro.css') }}">
 </head>
-<body>
+<body class="intro full">
+  <div class="scanlines"></div>
+  <div id="console" class="console"></div>
+  <script src="{{ url_for('static', filename='js/intro.js') }}"></script>
 </body>
 </html>

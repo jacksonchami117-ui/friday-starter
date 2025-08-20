@@ -1,37 +1,74 @@
-(function(){
-  const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const el = document.getElementById('console');
-  const lines = [
-    'Initiating FRIDAY protocol…',
-    'Mission: Orchestrate agents, ship outcomes, keep the hub in sync.',
-    'Performing system checks…',
-    'Agent link …… OK',
-    'Neural net status …… Online',
-    'All systems green.',
-    'Launching dashboard…'
+document.addEventListener("DOMContentLoaded", () => {
+  const consoleDiv = document.getElementById("console");
+
+  const logs = [
+    "INCOMING HTTP REQUEST DETECTED ...",
+    "SERVICE WAKING UP ...",
+    "ALLOCATING RESOURCES ...",
+    "BOOTING CORE SYSTEMS ...",
+    "INITIALIZING F.R.I.D.A.Y. PROTOCOL ...",
+    "F.R.I.D.A.Y. = Fully Responsive Intelligent Deployment & Analytics Yield",
+    "MISSION: Orchestrate agents, ship outcomes, synchronize hub systems.",
+    "Performing system diagnostics...",
+    "Agent link ........ OK",
+    "Neural net status ... Online",
+    "Encryption layer ... Active",
+    "All subsystems green.",
+    "",
+    "███████╗██████╗ ██╗██████╗  █████╗ ██╗   ██╗",
+    "██╔════╝██╔══██╗██║██╔══██╗██╔══██╗╚██╗ ██╔╝",
+    "█████╗  ██████╔╝██║██████╔╝███████║ ╚████╔╝ ",
+    "██╔══╝  ██╔═══╝ ██║██╔═══╝ ██╔══██║  ╚██╔╝  ",
+    "███████╗██║     ██║██║     ██║  ██║   ██║   ",
+    "╚══════╝╚═╝     ╚═╝╚═╝     ╚═╝  ╚═╝   ╚═╝   ",
+    "",
+    "OPERATION FRIDAY ENGAGED.",
+    ">>> Launching dashboard..."
   ];
-  let i = 0;
-  function typeLine() {
-    if (i >= lines.length) {
-      setTimeout(() => window.location.href = '/dashboard', 600);
-      return;
-    }
-    const text = lines[i++];
-    if (prefersReduced) {
-      el.textContent += text + '\n';
-      setTimeout(typeLine, 100);
-    } else {
-      let idx = 0;
-      const timer = setInterval(() => {
-        el.textContent = el.textContent + text.charAt(idx++);
-        if (idx >= text.length) { clearInterval(timer); el.textContent += '\n'; setTimeout(typeLine, 120); }
-      }, 12);
-    }
+
+  function randomTimestamp() {
+    const h = String(Math.floor(Math.random() * 24)).padStart(2, "0");
+    const m = String(Math.floor(Math.random() * 60)).padStart(2, "0");
+    const s = String(Math.floor(Math.random() * 60)).padStart(2, "0");
+    return `[${h}:${m}:${s}]`;
   }
-  window.addEventListener('keydown', (e)=>{
-    if (e.key === 'Escape' || e.key === 'Enter') {
-      window.location.href = '/dashboard';
+
+  async function typeLine(text, isLast=false) {
+    return new Promise(resolve => {
+      const line = document.createElement("div");
+      consoleDiv.appendChild(line);
+
+      let i = 0;
+      function typeChar() {
+        if (i < text.length) {
+          line.textContent += text[i];
+          i++;
+          setTimeout(typeChar, 25);
+        } else {
+          if (isLast) {
+            line.classList.add("blink-red");
+          } else {
+            const cursor = document.createElement("span");
+            cursor.className = "cursor";
+            line.appendChild(cursor);
+          }
+          resolve();
+        }
+      }
+      typeChar();
+    });
+  }
+
+  async function run() {
+    for (let j = 0; j < logs.length; j++) {
+      const prefix = logs[j].match(/^█/) ? "" : randomTimestamp() + " ";
+      await typeLine(prefix + logs[j], j === logs.length-1);
+      await new Promise(r => setTimeout(r, 200));
     }
-  });
-  typeLine();
-})();
+    setTimeout(() => {
+      window.location.href = "/home";
+    }, 3000);
+  }
+
+  run();
+});

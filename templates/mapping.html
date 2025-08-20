@@ -1,0 +1,49 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Column Mapping</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    label { display: inline-block; width: 120px; font-weight: bold; }
+    select { min-width: 220px; margin-bottom: 10px; }
+    .hint { color: #6b7280; font-size: 12px; margin-left: 8px; }
+  </style>
+</head>
+<body>
+  <h1>Column Mapping</h1>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <ul>
+        {% for category, message in messages %}
+          <li><strong>{{ category|upper }}:</strong> {{ message }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  {% endwith %}
+
+  <form method="post">
+    {% for field in system_fields %}
+      <div>
+        <label for="{{ field }}">{{ field }}</label>
+        <select id="{{ field }}" name="{{ field }}">
+          <option value="">-- (not mapped) --</option>
+          {% for h in headers %}
+            {% set sel = '' %}
+            {% if existing.get(field) == h or suggestions.get(field) == h %}
+              {% set sel = 'selected' %}
+            {% endif %}
+            <option value="{{ h }}" {{ sel }}>{{ h }}</option>
+          {% endfor %}
+        </select>
+        <span class="hint">CSV → {{ field }}</span>
+      </div>
+    {% endfor %}
+    <button type="submit">Save Mapping</button>
+  </form>
+
+  <br><a href="{{ url_for('leads.list_leads') }}">← Back to Leads</a>
+</body>
+</html>

@@ -1,7 +1,41 @@
-<h1>FRIDAY is running ✅</h1>
-<p><a href="/leads/">Leads</a></p>
-<p><a href="/render/">Render</a></p>
-<p><a href="/exports/">Exports</a></p>
-<p><a href="/diagnostics/">Diagnostics</a></p>
-<p><a href="/editor/">Editor</a></p>
-<p><a href="/orders/">Orders</a></p>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>FRIDAY — Dashboard</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 24px; }
+    .cards { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+    .card { border: 1px solid #ddd; border-radius: 8px; padding: 16px; }
+    .card h3 { margin: 6px 0 10px; }
+    a.btn { display: inline-block; padding: 8px 12px; border-radius: 6px; background: #111827; color: #fff; text-decoration: none; }
+    a.btn:hover { filter: brightness(1.08); }
+  </style>
+</head>
+<body>
+  <h1>FRIDAY — Dashboard</h1>
+  <div class="cards">
+    <div class="card">
+      <h3>Leads</h3>
+      <p>Upload CSV/XLSX and review accepted vs rejected rows.</p>
+      <a class="btn" href="/leads/">Open Leads</a>
+    </div>
+    <div class="card">
+      <h3>Render</h3>
+      <p>Preview accepted leads and run dummy render.</p>
+      <a class="btn" href="/render/start">Open Render</a>
+    </div>
+    <div class="card">
+      <h3>Exports</h3>
+      <p>Browse output files and download as ZIP or CSV.</p>
+      <a class="btn" href="/exports/">Open Exports</a>
+    </div>
+    <div class="card">
+      <h3>Diagnostics</h3>
+      <p>Logs and quick health counters.</p>
+      <a class="btn" href="/diagnostics/">Open Diagnostics</a>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,2 +1,54 @@
-<h1>Exports page</h1>
-<p><a href="/">Back</a></p>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Exports</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    th { background: #efefef; }
+    .btn { padding: 6px 10px; border: 1px solid #333; background: #111827; color: #fff; text-decoration: none; border-radius: 6px; }
+    form { display: inline-block; margin-right: 8px; }
+  </style>
+</head>
+<body>
+  <h1>Exports</h1>
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <ul>
+        {% for category, message in messages %}
+          <li><strong>{{ category|upper }}:</strong> {{ message }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  {% endwith %}
+
+  <div>
+    <form method="post" action="{{ url_for('exports.make_zip') }}">
+      <button class="btn" type="submit">Download All (ZIP)</button>
+    </form>
+    <form method="post" action="{{ url_for('exports.make_export_csv') }}">
+      <button class="btn" type="submit">Create exports.csv</button>
+    </form>
+    <a class="btn" href="{{ url_for('index') }}">← Back to Dashboard</a>
+  </div>
+
+  {% if files %}
+  <table>
+    <thead><tr><th>File</th><th>Size (bytes)</th><th>Action</th></tr></thead>
+    <tbody>
+      {% for f in files %}
+        <tr>
+          <td>{{ f.name }}</td><td>{{ f.size }}</td>
+          <td><a class="btn" href="{{ url_for('exports.download_file', filename=f.name) }}">Download</a></td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+    <p>No output files yet.</p>
+  {% endif %}
+</body>
+</html>

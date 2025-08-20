@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7,6 +8,16 @@
 <body>
   <h1>Upload Leads CSV/XLSX</h1>
 
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <ul>
+        {% for category, message in messages %}
+          <li><strong>{{ category|upper }}:</strong> {{ message }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  {% endwith %}
+
   <form action="{{ url_for('leads.upload_leads') }}" method="post" enctype="multipart/form-data">
     <input type="file" name="file" accept=".csv,.xlsx" required>
     <button type="submit">Upload</button>
@@ -14,6 +25,7 @@
 
   <br>
   <a href="{{ url_for('leads.list_leads') }}">📋 View Uploaded Leads</a> |
+  <a href="{{ url_for('leads.list_rejected') }}">🚫 View Rejected</a> |
   <a href="{{ url_for('index') }}">← Back to Dashboard</a>
 </body>
 </html>

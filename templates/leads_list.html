@@ -1,11 +1,12 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Uploaded Leads</title>
+  <meta charset="UTF-8"><title>Uploaded Leads</title>
   <style>
     body { font-family: Arial, sans-serif; padding: 20px; background: #f9f9f9; }
     h1 { margin-bottom: 15px; }
+    .actions { margin-bottom: 10px; }
     .search-bar { position: sticky; top: 0; background: #fff; padding: 10px;
       border-bottom: 2px solid #ccc; z-index: 10; }
     .search-bar input { width: 250px; padding: 6px; font-size: 14px; }
@@ -14,10 +15,27 @@
     th { background: #efefef; cursor: pointer; }
     tr:nth-child(even) { background: #f2f2f2; }
     tr:hover { background: #e9f7ff; }
+    .btn { padding: 6px 10px; border: 1px solid #333; background: #111827; color: #fff; text-decoration: none; border-radius: 6px; }
   </style>
 </head>
 <body>
   <h1>Uploaded Leads</h1>
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <ul>
+        {% for category, message in messages %}
+          <li><strong>{{ category|upper }}:</strong> {{ message }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  {% endwith %}
+
+  <div class="actions">
+    <a class="btn" href="{{ url_for('leads.mapping') }}">🗺️ Column Mapping</a>
+    <a class="btn" href="{{ url_for('render.run_render') }}">🎬 Render All (Dummy)</a>
+    <a class="btn" href="{{ url_for('exports.explore') }}">📦 Exports</a>
+  </div>
+
   <div class="search-bar"><label for="search">Search: </label>
     <input type="text" id="search" placeholder="Type to filter leads..."></div>
   {% if leads %}

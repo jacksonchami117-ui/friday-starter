@@ -1,7 +1,8 @@
-from flask import Blueprint, render_template
+
+from flask import Blueprint
 
 orders_bp = Blueprint("orders", __name__, url_prefix="/orders")
 
 @orders_bp.route("/", methods=["GET"])
 def orders_home():
-    return render_template("orders.html")
+    return "Orders module (placeholder)."

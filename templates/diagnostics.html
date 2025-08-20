@@ -1,2 +1,33 @@
-<h1>Diagnostics page</h1>
-<p><a href="/">Back</a></p>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Diagnostics</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    pre { background: #0f172a; color: #e5e7eb; padding: 12px; border-radius: 8px; overflow: auto; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+    .card { border: 1px solid #ddd; border-radius: 8px; padding: 12px; }
+  </style>
+</head>
+<body>
+  <h1>Diagnostics</h1>
+  <div class="grid">
+    <div class="card">
+      <h3>Counters</h3>
+      <ul>
+        <li>Accepted leads: {{ counts.accepted }}</li>
+        <li>Rejected leads: {{ counts.rejected }}</li>
+        <li>Output files: {{ counts.outputs }}</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Recent Logs</h3>
+      <pre>{% for line in log_tail %}{{ line }}{% endfor %}</pre>
+    </div>
+  </div>
+
+  <br><a href="{{ url_for('index') }}">← Back to Dashboard</a>
+</body>
+</html>

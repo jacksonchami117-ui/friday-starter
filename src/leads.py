@@ -1,61 +1,33 @@
-import os
-import pandas as pd
-from flask import Blueprint, render_template, request, redirect, url_for, current_app
+leads = []
+if request.method == "POST":
+    f = request.files.get("file")
+    if not f:
+        flash("No file provided", "danger")
+        return redirect(url_for("leads.leads_home"))
 
-leads_bp = Blueprint("leads", __name__, url_prefix="/leads")
+    ext = os.path.splitext(f.filename)[1].lower()
+    if ext not in UPLOAD_EXT:
+        flash("Unsupported file type", "danger")
+        return redirect(url_for("leads.leads_home"))
 
-DATA_DIR = os.getenv("DATA_DIR", os.path.join(os.path.dirname(__file__), "..", "state"))
-os.makedirs(DATA_DIR, exist_ok=True)
+    save_path = os.path.join(upload_dir, secure_filename(f.filename))
+    f.save(save_path)
 
-
-@leads_bp.route("/", methods=["GET"])
-def leads_home():
-    """Show the leads upload page"""
-    return render_template("leads.html")
-
-
-@leads_bp.route("/upload", methods=["POST"])
-def upload_leads():
-    """Handle CSV upload"""
-    if "file" not in request.files:
-        return "No file part", 400
-
-    file = request.files["file"]
-    if file.filename == "":
-        return "No selected file", 400
-
-    # Save uploaded CSV
-    save_path = os.path.join(DATA_DIR, "accepted_leads.csv")
-    file.save(save_path)
-
-    # Try reading with pandas
-    try:
+    if ext == ".csv":
         df = pd.read_csv(save_path)
-        rows = len(df)
-        cols = list(df.columns)
-    except Exception as e:
-        return f"Error reading CSV: {str(e)}", 400
+    else:
+        df = pd.read_excel(save_path)
 
-    # Show confirmation page
-    return render_template(
-        "leads_confirm.html",
-        rows=rows,
-        cols=cols
-    )
+    df = normalize_columns(df)
 
+    # Save accepted only (no validation yet)
+    df.to_csv(accepted_path, index=False)
 
-# ✅ STEP 3: Add list route here
-@leads_bp.route("/list", methods=["GET"])
-def list_leads():
-    """Show all uploaded leads in a table"""
-    save_path = os.path.join(DATA_DIR, "accepted_leads.csv")
-    if not os.path.exists(save_path):
-        return "No leads uploaded yet.", 404
+    flash(f"Imported {len(df)} leads.", "success")
 
-    try:
-        df = pd.read_csv(save_path)
-        leads = df.to_dict(orient="records")  # list of dicts
-    except Exception as e:
-        return f"Error reading CSV: {str(e)}", 400
+if os.path.exists(accepted_path):
+    with open(accepted_path, newline="") as f_in:
+        reader = csv.DictReader(f_in)
+        leads = list(reader)
 
-    return render_template("leads_list.html", leads=leads)
+return render_template("leads.html", leads=leads)

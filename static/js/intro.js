@@ -1,74 +1,77 @@
-document.addEventListener("DOMContentLoaded", () => {
-  const consoleDiv = document.getElementById("console");
+const consoleEl = document.getElementById("console");
 
-  const logs = [
-    "INCOMING HTTP REQUEST DETECTED ...",
-    "SERVICE WAKING UP ...",
-    "ALLOCATING RESOURCES ...",
-    "BOOTING CORE SYSTEMS ...",
-    "INITIALIZING F.R.I.D.A.Y. PROTOCOL ...",
-    "F.R.I.D.A.Y. = Fully Responsive Intelligent Deployment & Analytics Yield",
-    "MISSION: Orchestrate agents, ship outcomes, synchronize hub systems.",
-    "Performing system diagnostics...",
-    "Agent link ........ OK",
-    "Neural net status ... Online",
-    "Encryption layer ... Active",
-    "All subsystems green.",
-    "",
-    "███████╗██████╗ ██╗██████╗  █████╗ ██╗   ██╗",
-    "██╔════╝██╔══██╗██║██╔══██╗██╔══██╗╚██╗ ██╔╝",
-    "█████╗  ██████╔╝██║██████╔╝███████║ ╚████╔╝ ",
-    "██╔══╝  ██╔═══╝ ██║██╔═══╝ ██╔══██║  ╚██╔╝  ",
-    "███████╗██║     ██║██║     ██║  ██║   ██║   ",
-    "╚══════╝╚═╝     ╚═╝╚═╝     ╚═╝  ╚═╝   ╚═╝   ",
-    "",
-    "OPERATION FRIDAY ENGAGED.",
-    ">>> Launching dashboard..."
-  ];
-
-  function randomTimestamp() {
-    const h = String(Math.floor(Math.random() * 24)).padStart(2, "0");
-    const m = String(Math.floor(Math.random() * 60)).padStart(2, "0");
-    const s = String(Math.floor(Math.random() * 60)).padStart(2, "0");
-    return `[${h}:${m}:${s}]`;
-  }
-
-  async function typeLine(text, isLast=false) {
-    return new Promise(resolve => {
-      const line = document.createElement("div");
-      consoleDiv.appendChild(line);
-
-      let i = 0;
-      function typeChar() {
-        if (i < text.length) {
-          line.textContent += text[i];
-          i++;
-          setTimeout(typeChar, 25);
-        } else {
-          if (isLast) {
-            line.classList.add("blink-red");
-          } else {
-            const cursor = document.createElement("span");
-            cursor.className = "cursor";
-            line.appendChild(cursor);
-          }
-          resolve();
-        }
-      }
-      typeChar();
-    });
-  }
-
-  async function run() {
-    for (let j = 0; j < logs.length; j++) {
-      const prefix = logs[j].match(/^█/) ? "" : randomTimestamp() + " ";
-      await typeLine(prefix + logs[j], j === logs.length-1);
-      await new Promise(r => setTimeout(r, 200));
+function printLine(text, delay = 50, callback) {
+  let i = 0;
+  const interval = setInterval(() => {
+    consoleEl.innerHTML += text[i];
+    i++;
+    if (i >= text.length) {
+      clearInterval(interval);
+      consoleEl.innerHTML += "\n\n"; // extra spacing
+      if (callback) callback();
     }
-    setTimeout(() => {
-      window.location.href = "/home";
-    }, 3000);
-  }
+  }, delay);
+}
 
-  run();
-});
+function printAscii(asciiArray, delay = 200) {
+  asciiArray.forEach((line, i) => {
+    setTimeout(() => {
+      consoleEl.innerHTML += line + "\n";
+    }, i * delay);
+  });
+}
+
+// Clean ASCII for FRIDAY (centered block letters)
+const fridayAscii = [
+"███████╗██████╗ ██╗██████╗  █████╗ ██╗   ██╗",
+"██╔════╝██╔══██╗██║██╔══██╗██╔══██╗╚██╗ ██╔╝",
+"█████╗  ██████╔╝██║██████╔╝███████║ ╚████╔╝ ",
+"██╔══╝  ██╔═══╝ ██║██╔═══╝ ██╔══██║  ╚██╔╝  ",
+"██║     ██║     ██║██║     ██║  ██║   ██║   ",
+"╚═╝     ╚═╝     ╚═╝╚═╝     ╚═╝  ╚═╝   ╚═╝   "
+];
+
+// Boot sequence lines
+const lines = [
+  "[06:34:30] INCOMING HTTP REQUEST DETECTED ...",
+  "[07:12:38] SERVICE WAKING UP ...",
+  "[09:45:59] ALLOCATING RESOURCES ...",
+  "[10:25:51] BOOTING CORE SYSTEMS ...",
+  "[11:31:41] INITIALIZING FRIDAY PROTOCOL ...",
+  "[13:45:50] F.R.I.D.A.Y = Fully Responsive Intelligent Deployment & Analytics Yield",
+  "[15:09:56] MISSION: Orchestrate agents, ship outcomes, synchronize hub systems.",
+  "[16:22:05] PERFORMING SYSTEM DIAGNOSTICS ...",
+  "[17:07:37] AGENT LINK ........ OK",
+  "[18:05:41] NEURAL NET STATUS ... ONLINE",
+  "[19:44:05] ENCRYPTION LAYER ... ACTIVE",
+  "[20:35:15] ALL SUBSYSTEMS GREEN.",
+  ""
+];
+
+// Print sequence
+function runIntro() {
+  let idx = 0;
+  function next() {
+    if (idx < lines.length) {
+      printLine(lines[idx], 25, () => {
+        idx++;
+        next();
+      });
+    } else {
+      // ASCII logo after logs
+      setTimeout(() => {
+        printAscii(fridayAscii, 300);
+        setTimeout(() => {
+          printLine("OPERATION F.R.I.D.A.Y. ENGAGED", 40, () => {
+            setTimeout(() => {
+              window.location.href = "/home";
+            }, 2500);
+          });
+        }, 2500);
+      }, 800);
+    }
+  }
+  next();
+}
+
+runIntro();

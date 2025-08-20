@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Upload Confirmation</title>
+</head>
+<body>
+  <h1>✅ Upload Successful</h1>
+  <p>Rows detected: <strong>{{ row_count }}</strong></p>
+  <p>Columns detected:</p>
+  <ul>
+    {% for col in headers %}
+      <li>{{ col }}</li>
+    {% endfor %}
+  </ul>
+  <a href="/home">← Back to Dashboard</a>
+</body>
+</html>

@@ -1,6 +1,6 @@
 import os
 import pandas as pd
-from flask import Blueprint, render_template, request, redirect, url_for
+from flask import Blueprint, render_template, request, current_app
 
 leads_bp = Blueprint('leads', __name__, url_prefix='/leads')
 
@@ -9,7 +9,6 @@ os.makedirs(DATA_DIR, exist_ok=True)
 
 @leads_bp.route("/", methods=["GET"])
 def leads_home():
-    # Show the upload form
     return render_template("leads.html")
 
 @leads_bp.route("/upload", methods=["POST"])
@@ -24,12 +23,16 @@ def upload_leads():
     save_path = os.path.join(DATA_DIR, "accepted_leads.csv")
     file.save(save_path)
 
-    # Optional: validate CSV
     try:
         df = pd.read_csv(save_path)
-        print(f"Uploaded CSV with {len(df)} rows")
-    except Exception as e:
-        return f"Error reading CSV: {str(e)}", 400
+        columns = list(df.columns)
+        row_count = len(df)
 
-    # ✅ After upload, redirect to main dashboard
-    return redirect(url_for("index"))
+        return render_template(
+            "leads_confirm.html",
+            row_count=row_count,
+            columns=columns
+        )
+    except Exception as e:
+        current_app.logger.error(f"Error reading CSV: {e}")
+        return f"<h3>Error reading CSV: {e}</h3>", 500

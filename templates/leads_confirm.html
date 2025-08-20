@@ -1,14 +1,15 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Upload Confirmation</title>
+  <meta charset="UTF-8">
+  <title>Upload Successful</title>
 </head>
 <body>
   <h1>✅ Upload Successful</h1>
-  <p>Rows detected: <strong>{{ row_count }}</strong></p>
+  <p>Rows detected: <b>{{ row_count }}</b></p>
   <p>Columns detected:</p>
   <ul>
-    {% for col in headers %}
+    {% for col in columns %}
       <li>{{ col }}</li>
     {% endfor %}
   </ul>

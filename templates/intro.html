@@ -1,19 +1,25 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Operation F.R.I.D.A.Y.</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/intro.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/intro_boot.css') }}">
 </head>
 <body>
-  <!-- Skip button -->
-  <a href="/skip-intro" class="skip-btn">Skip Intro</a>
-
-  <div class="intro full">
-    <div class="scanlines"></div>
-    <div class="console" id="console"></div>
-  </div>
-
-  <script src="{{ url_for('static', filename='js/intro.js') }}"></script>
+  <a class="skip" href="{{ url_for('index') }}">Skip Intro →</a>
+  <main class="boot">
+    <section class="console">
+      <pre id="console" class="console-text"></pre>
+    </section>
+    <aside class="pixels">
+      <div id="grid" class="grid"></div>
+      <div class="legend">
+        <span class="dot"></span>
+        <span class="label">APPLICATION</span>
+      </div>
+    </aside>
+  </main>
+  <script src="{{ url_for('static', filename='js/intro_boot.js') }}"></script>
 </body>
 </html>

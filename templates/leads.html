@@ -2,14 +2,15 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Leads Upload</title>
+    <title>Upload Leads CSV</title>
 </head>
 <body>
     <h1>Upload Leads CSV</h1>
-    <form action="/leads/upload" method="post" enctype="multipart/form-data">
-        <input type="file" name="file" accept=".csv" required>
+    <form action="{{ url_for('leads.upload_leads') }}" method="post" enctype="multipart/form-data">
+        <input type="file" name="file" accept=".csv">
         <button type="submit">Upload</button>
     </form>
-    <p><a href="/">Back</a></p>
+    <br>
+    <a href="{{ url_for('index') }}">Back</a>
 </body>
 </html>

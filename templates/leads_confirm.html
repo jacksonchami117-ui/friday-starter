@@ -3,16 +3,28 @@
 <head>
   <meta charset="UTF-8">
   <title>Upload Successful</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 40px; background: #fafafa; }
+    h1 { color: #111; }
+    .success { color: green; font-weight: bold; }
+    .box { border: 1px solid #ccc; padding: 20px; margin-top: 20px; background: #fff; border-radius: 6px; }
+    ul { margin: 0; padding: 0 20px; }
+    a { display: inline-block; margin-top: 20px; text-decoration: none; color: #007BFF; }
+    a:hover { text-decoration: underline; }
+  </style>
 </head>
 <body>
   <h1>✅ Upload Successful</h1>
-  <p>Rows detected: <b>{{ row_count }}</b></p>
-  <p>Columns detected:</p>
-  <ul>
-    {% for col in columns %}
-      <li>{{ col }}</li>
-    {% endfor %}
-  </ul>
-  <a href="/home">← Back to Dashboard</a>
+  <div class="box">
+    <p>Rows detected: <b>{{ rows }}</b></p>
+    <p>Columns detected:</p>
+    <ul>
+      {% for col in cols %}
+        <li>{{ col }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+
+  <a href="{{ url_for('index') }}">← Back to Dashboard</a>
 </body>
 </html>

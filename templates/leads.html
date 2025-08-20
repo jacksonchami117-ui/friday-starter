@@ -1,3 +1,15 @@
-<h1>Leads page</h1>
-<p>Upload leads will go here later.</p>
-<p><a href="/">Back</a></p>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Leads Upload</title>
+</head>
+<body>
+    <h1>Upload Leads CSV</h1>
+    <form action="/leads/upload" method="post" enctype="multipart/form-data">
+        <input type="file" name="file" accept=".csv" required>
+        <button type="submit">Upload</button>
+    </form>
+    <p><a href="/">Back</a></p>
+</body>
+</html>

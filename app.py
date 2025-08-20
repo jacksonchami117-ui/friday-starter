@@ -1,6 +1,6 @@
 import os
 import logging
-from flask import Flask, render_template, send_from_directory
+from flask import Flask, render_template, send_from_directory, redirect, url_for
 
 # Import blueprints
 from src.leads import leads_bp
@@ -20,14 +20,17 @@ def create_app():
     app.config["DATA_DIR"] = data_dir
 
     # Ensure runtime folders exist
-    os.makedirs(data_dir, exist_ok=True)
-    os.makedirs(os.path.join(data_dir, "uploads"), exist_ok=True)
-    os.makedirs(os.path.join(data_dir, "outputs", "videos"), exist_ok=True)
-    os.makedirs(os.path.join(data_dir, "outputs", "thumbs"), exist_ok=True)
-    os.makedirs(os.path.join(data_dir, "logs"), exist_ok=True)
-    os.makedirs(os.path.join(data_dir, "batches"), exist_ok=True)
-    os.makedirs(os.path.join(data_dir, "assets"), exist_ok=True)
-    os.makedirs(os.path.join(data_dir, "templates"), exist_ok=True)
+    for p in [
+        data_dir,
+        os.path.join(data_dir, "uploads"),
+        os.path.join(data_dir, "outputs", "videos"),
+        os.path.join(data_dir, "outputs", "thumbs"),
+        os.path.join(data_dir, "logs"),
+        os.path.join(data_dir, "batches"),
+        os.path.join(data_dir, "assets"),
+        os.path.join(data_dir, "templates"),
+    ]:
+        os.makedirs(p, exist_ok=True)
 
     # Logging
     log_path = os.path.join(data_dir, "logs", "app.log")
@@ -48,17 +51,17 @@ def create_app():
     app.register_blueprint(editor_bp)
 
     # Routes
-    @app.route("/")
-    def intro():
-        return render_template("intro.html")
+    @app.route("/")              # Boot intro
+    def boot():
+        return render_template("intro_boot.html")
 
-    @app.route("/home")
+    @app.route("/home")          # Dashboard
     def index():
         return render_template("index.html")
 
-    @app.route("/skip-intro")
+    @app.route("/skip-intro")    # Quick jump if needed
     def skip_intro():
-        return render_template("index.html")
+        return redirect(url_for("index"))
 
     @app.route("/health")
     def health():

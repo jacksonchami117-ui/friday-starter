@@ -1,6 +1,8 @@
 import os
 import logging
 from flask import Flask, render_template, send_from_directory
+
+# Import blueprints
 from src.leads import leads_bp
 from src.orders import orders_bp
 from src.render_routes import render_bp
@@ -16,7 +18,7 @@ def create_app():
     data_dir = os.getenv("DATA_DIR", os.path.join(base_dir, "state"))
     app.config["DATA_DIR"] = data_dir
 
-    # Make sure runtime folders exist
+    # Ensure runtime folders exist
     os.makedirs(data_dir, exist_ok=True)
     os.makedirs(os.path.join(data_dir, "uploads"), exist_ok=True)
     os.makedirs(os.path.join(data_dir, "outputs", "videos"), exist_ok=True)
@@ -44,13 +46,14 @@ def create_app():
     app.register_blueprint(diagnostics_bp)
     app.register_blueprint(editor_bp)
 
+    # Routes
     @app.route("/")
     def index():
         return render_template("index.html")
 
     @app.route("/health")
     def health():
-        return {"ok": True, "ts": os.popen("date -u +%Y-%m-%dT%H:%M:%SZ").read().strip()}
+        return "OK", 200
 
     @app.route("/media/assets/<path:filename>")
     def media_assets(filename):
@@ -64,5 +67,5 @@ def create_app():
 
 if __name__ == "__main__":
     app = create_app()
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=True)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+

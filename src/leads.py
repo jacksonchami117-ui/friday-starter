@@ -42,3 +42,20 @@ def upload_leads():
         rows=rows,
         cols=cols
     )
+
+
+# ✅ STEP 3: Add list route here
+@leads_bp.route("/list", methods=["GET"])
+def list_leads():
+    """Show all uploaded leads in a table"""
+    save_path = os.path.join(DATA_DIR, "accepted_leads.csv")
+    if not os.path.exists(save_path):
+        return "No leads uploaded yet.", 404
+
+    try:
+        df = pd.read_csv(save_path)
+        leads = df.to_dict(orient="records")  # list of dicts
+    except Exception as e:
+        return f"Error reading CSV: {str(e)}", 400
+
+    return render_template("leads_list.html", leads=leads)

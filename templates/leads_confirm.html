@@ -4,27 +4,35 @@
   <meta charset="UTF-8">
   <title>Upload Successful</title>
   <style>
-    body { font-family: Arial, sans-serif; padding: 40px; background: #fafafa; }
-    h1 { color: #111; }
-    .success { color: green; font-weight: bold; }
-    .box { border: 1px solid #ccc; padding: 20px; margin-top: 20px; background: #fff; border-radius: 6px; }
-    ul { margin: 0; padding: 0 20px; }
-    a { display: inline-block; margin-top: 20px; text-decoration: none; color: #007BFF; }
+    body { font-family: Arial, sans-serif; padding: 20px; background: #f9f9f9; }
+    h1 { color: #222; }
+    ul { margin-top: 10px; }
+    .success {
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px; background: #e6ffe6; border: 1px solid #66cc66; border-radius: 6px;
+    }
+    .success span { font-size: 20px; }
+    a { margin-top: 20px; display: inline-block; color: #0066cc; text-decoration: none; }
     a:hover { text-decoration: underline; }
   </style>
 </head>
 <body>
-  <h1>✅ Upload Successful</h1>
-  <div class="box">
-    <p>Rows detected: <b>{{ rows }}</b></p>
-    <p>Columns detected:</p>
-    <ul>
-      {% for col in cols %}
-        <li>{{ col }}</li>
-      {% endfor %}
-    </ul>
+  <div class="success">
+    <span>✅</span>
+    <h1>Upload Successful</h1>
   </div>
 
+  <p><b>Rows detected:</b> {{ rows }}</p>
+  <p><b>Columns detected:</b></p>
+  <ul>
+    {% for col in cols %}
+      <li>{{ col }}</li>
+    {% endfor %}
+  </ul>
+
+  <br>
+  <a href="{{ url_for('leads.list_leads') }}">📋 View Uploaded Leads</a>
+  <br><br>
   <a href="{{ url_for('index') }}">← Back to Dashboard</a>
 </body>
 </html>

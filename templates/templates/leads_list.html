@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Uploaded Leads</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #f9f9f9;
+    }
+    h1 {
+      margin-bottom: 15px;
+    }
+    /* Sticky search bar */
+    .search-bar {
+      position: sticky;
+      top: 0;
+      background: #fff;
+      padding: 10px;
+      border-bottom: 2px solid #ccc;
+      z-index: 10;
+    }
+    .search-bar input {
+      width: 250px;
+      padding: 6px;
+      font-size: 14px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: left;
+    }
+    th {
+      background: #efefef;
+      cursor: pointer; /* shows sortable */
+    }
+    /* Alternating row colors */
+    tr:nth-child(even) {
+      background: #f2f2f2;
+    }
+    tr:hover {
+      background: #e9f7ff;
+    }
+  </style>
+</head>
+<body>
+  <h1>Uploaded Leads</h1>
+
+  <!-- Sticky Search Bar -->
+  <div class="search-bar">
+    <label for="search">Search: </label>
+    <input type="text" id="search" placeholder="Type to filter leads...">
+  </div>
+
+  <table id="leadsTable">
+    <thead>
+      <tr>
+        <th onclick="sortTable(0)">#</th>
+        {% for col in leads[0].keys() %}
+          <th onclick="sortTable({{ loop.index }})">{{ col }}</th>
+        {% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in leads %}
+      <tr>
+        <td>{{ loop.index }}</td>
+        {% for col in row.values() %}
+          <td>{{ col }}</td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <script>
+    // 🔎 Simple client-side search
+    document.getElementById("search").addEventListener("keyup", function () {
+      let filter = this.value.toLowerCase();
+      let rows = document.querySelectorAll("#leadsTable tbody tr");
+
+      rows.forEach(row => {
+        let text = row.innerText.toLowerCase();
+        row.style.display = text.includes(filter) ? "" : "none";
+      });
+    });
+
+    // ↕ Sortable columns
+    function sortTable(n) {
+      let table = document.getElementById("leadsTable");
+      let switching = true, dir = "asc", switchcount = 0;
+
+      while (switching) {
+        switching = false;
+        let rows = table.rows;
+
+        for (let i = 1; i < rows.length - 1; i++) {
+          let shouldSwitch = false;
+          let x = rows[i].getElementsByTagName("TD")[n];
+          let y = rows[i + 1].getElementsByTagName("TD")[n];
+
+          if (dir === "asc" && x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
+            shouldSwitch = true;
+          } else if (dir === "desc" && x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) {
+            shouldSwitch = true;
+          }
+
+          if (shouldSwitch) {
+            rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+            switching = true;
+            switchcount++;
+            break;
+          }
+        }
+
+        if (switchcount === 0 && dir === "asc") {
+          dir = "desc";
+          switching = true;
+        }
+      }
+    }
+  </script>
+</body>
+</html>

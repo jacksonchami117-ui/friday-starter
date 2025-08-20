@@ -1,47 +1,22 @@
-# Friday Instructions
+# FRIDAY Instructions (Ops Manual)
 
-This repo is managed by **Friday** — an autonomous AI agent that edits, commits, and deploys code.
-
----
-
-## Workflow
-
-1. **Add tasks**
-   - Put tasks in `TASKS.md` as bullet points.
-   - Example:
-     ```
-     - Add an About page with description
-     - Fix app.py to read PORT from os.environ
-     ```
-
-2. **Friday Runner**
-   - In Codespaces terminal, Friday is started automatically (see below).
-   - It will:
-     - Read `TASKS.md`
-     - Apply code changes
-     - Commit & push with message `AUTO: ...`
-     - Trigger GitHub Actions
-     - Render redeploys automatically to:
-       https://friday-starter.onrender.com
-
-3. **Deployment**
-   - GitHub Actions workflow `.github/workflows/deploy.yml` runs on every push.
-   - Render is connected to repo → auto-deploys each commit.
+FRIDAY is a modular Flask system for personalized video outreach.
 
 ---
 
-## Collaboration
-
-- Anyone can add tasks to `TASKS.md` and open the Codespace.
-- Friday Runner launches automatically and handles everything.
-- No manual copy/paste or deployment needed.
-
----
-
-## Safety
-
-- Friday pushes directly to `main`.  
-- If stability is critical, create a `dev` branch and adjust workflows.  
-- Logs are stored in `state/log.txt`.
+## Core Modules
+- **Leads** — upload CSV/XLSX, validate, split accepted vs rejected
+- **Editor** — drag/drop segments, save template manifest
+- **Render** — generate personalized videos per lead (FFmpeg)
+- **Exports** — Instantly/Smartlead CSV + batch ZIPs
+- **Diagnostics** — package logs/CSVs for debugging
 
 ---
+
+## Deployment
+
+### Local
+```bash
+pip install -r requirements.txt
+sudo apt-get install -y ffmpeg
+python app.py

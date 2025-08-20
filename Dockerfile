@@ -8,7 +8,7 @@ ENV PYTHONUNBUFFERED=1
 # Set working directory
 WORKDIR /app
 
-# Make sure Python can always find your code and the src package
+# Ensure Python can always import from /app and /app/src
 ENV PYTHONPATH=/app:/app/src
 
 # Install system dependencies (needed for pandas, psycopg2, ffmpeg, etc.)

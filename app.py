@@ -1,6 +1,5 @@
 import os
 import logging
-from datetime import datetime
 from flask import Flask, render_template, send_from_directory
 
 # Import blueprints
@@ -51,7 +50,7 @@ def create_app():
     # Routes
     @app.route("/")
     def intro():
-        return render_template("intro.html", now=datetime.utcnow().strftime("%H:%M:%S"))
+        return render_template("intro.html")
 
     @app.route("/home")
     def index():

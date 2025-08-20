@@ -5,34 +5,17 @@
   <title>Upload Successful</title>
   <style>
     body { font-family: Arial, sans-serif; padding: 20px; background: #f9f9f9; }
-    h1 { color: #222; }
-    ul { margin-top: 10px; }
-    .success {
-      display: flex; align-items: center; gap: 10px;
-      padding: 12px; background: #e6ffe6; border: 1px solid #66cc66; border-radius: 6px;
-    }
-    .success span { font-size: 20px; }
-    a { margin-top: 20px; display: inline-block; color: #0066cc; text-decoration: none; }
-    a:hover { text-decoration: underline; }
+    .success { display: flex; align-items: center; gap: 10px;
+      padding: 12px; background: #e6ffe6; border: 1px solid #66cc66; border-radius: 6px; }
   </style>
 </head>
 <body>
-  <div class="success">
-    <span>✅</span>
-    <h1>Upload Successful</h1>
-  </div>
-
+  <div class="success"><span>✅</span><h2>Upload Successful</h2></div>
   <p><b>Rows detected:</b> {{ rows }}</p>
   <p><b>Columns detected:</b></p>
-  <ul>
-    {% for col in cols %}
-      <li>{{ col }}</li>
-    {% endfor %}
-  </ul>
-
+  <ul>{% for col in cols %}<li>{{ col }}</li>{% endfor %}</ul>
   <br>
-  <a href="{{ url_for('leads.list_leads') }}">📋 View Uploaded Leads</a>
-  <br><br>
+  <a href="{{ url_for('leads.list_leads') }}">📋 View Uploaded Leads</a><br><br>
   <a href="{{ url_for('index') }}">← Back to Dashboard</a>
 </body>
 </html>

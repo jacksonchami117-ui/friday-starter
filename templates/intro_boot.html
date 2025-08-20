@@ -1,66 +1,32 @@
-// Grab console element
-const consoleEl = document.getElementById("console");
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Operation F.R.I.D.A.Y.</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/intro_boot.css') }}">
+</head>
+<body class="theme-dark">
+  <!-- Skip button -->
+  <a class="skip" href="{{ url_for('index') }}">Skip Intro →</a>
 
-// Utility: timestamp like [12:34:56]
-function stamp() {
-  return new Date().toTimeString().slice(0, 8);
-}
+  <main class="boot">
+    <!-- Console section -->
+    <section class="console">
+      <pre id="console" class="console-text"></pre>
+    </section>
 
-// Typewriter effect
-async function typeLine(line, delay = 20) {
-  for (let i = 0; i < line.length; i++) {
-    consoleEl.textContent += line[i];
-    await new Promise(r => setTimeout(r, delay));
-  }
-  consoleEl.textContent += "\n";
-}
+    <!-- Pixel grid section -->
+    <aside class="pixels">
+      <div id="grid" class="grid" aria-hidden="true"></div>
+      <div class="legend">
+        <span class="dot"></span>
+        <span class="label">APPLICATION</span>
+      </div>
+    </aside>
+  </main>
 
-// Run intro boot log
-async function runLog() {
-  const lines = [
-    `[${stamp()}] INCOMING HTTP REQUEST DETECTED ...`,
-    `[${stamp()}] SERVICE WAKING UP ...`,
-    `[${stamp()}] ALLOCATING RESOURCES ...`,
-    `[${stamp()}] STARTING SYSTEM ...`,
-    `[${stamp()}] ENVIRONMENT READY ...`,
-    `[${stamp()}] INITIALIZING F.R.I.D.A.Y. PROTOCOL ...`
-  ];
-
-  for (const l of lines) {
-    await typeLine(l, 25);
-  }
-
-  const box = [
-    "┌──────────────────────────┐",
-    "│   WELCOME TO F.R.I.D.A.Y │",
-    "└──────────────────────────┘"
-  ];
-
-  for (const b of box) {
-    await typeLine(b, 2);
-  }
-
-  await typeLine(`[${stamp()}] SYSTEM ONLINE ✅`, 20);
-
-  // After a short pause → go to dashboard
-  setTimeout(() => window.location.href = "/home", 2500);
-}
-
-// Grid animation
-const gridEl = document.getElementById("grid");
-for (let i = 0; i < 81; i++) {
-  const d = document.createElement("div");
-  d.className = "cell";
-  gridEl.appendChild(d);
-}
-
-const cells = Array.from(gridEl.children);
-setInterval(() => {
-  cells.forEach(c => c.classList.remove("active"));
-  for (let i = 0; i < 5; i++) {
-    cells[Math.floor(Math.random() * cells.length)].classList.add("active");
-  }
-}, 200);
-
-// Kick everything off
-runLog();
+  <!-- JS for boot animation -->
+  <script src="{{ url_for('static', filename='js/intro_boot.js') }}"></script>
+</body>
+</html>

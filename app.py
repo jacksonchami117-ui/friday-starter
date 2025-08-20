@@ -10,6 +10,7 @@ from src.exports import exports_bp
 from src.diagnostics_routes import diagnostics_bp
 from src.editor import editor_bp
 
+
 def create_app():
     app = Flask(__name__)
     app.secret_key = os.getenv("SECRET_KEY", "dev-secret-key")
@@ -65,7 +66,13 @@ def create_app():
 
     return app
 
+
+# ----------------------------------------------------
+# Run locally (python app.py) OR expose for Gunicorn
+# ----------------------------------------------------
 if __name__ == "__main__":
     app = create_app()
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
 
+# Expose for Gunicorn (Render looks for app:app)
+app = create_app()

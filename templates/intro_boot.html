@@ -1,7 +1,30 @@
-<aside class="pixels">
-  <div id="grid" class="grid" aria-hidden="true"></div>
-  <div class="legend">
-    <span class="dot"></span>
-    <span class="label">APPLICATION</span>
-  </div>
-</aside>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Operation F.R.I.D.A.Y.</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/intro_boot.css') }}">
+</head>
+<body>
+  <a class="skip" href="{{ url_for('index') }}">Skip Intro →</a>
+  
+  <main class="boot">
+    <!-- Console section -->
+    <section class="console">
+      <pre id="console" class="console-text"></pre>
+    </section>
+
+    <!-- Pixel grid section -->
+    <aside class="pixels">
+      <div id="grid" class="grid" aria-hidden="true"></div>
+      <div class="legend">
+        <span class="dot"></span>
+        <span class="label">APPLICATION</span>
+      </div>
+    </aside>
+  </main>
+
+  <script src="{{ url_for('static', filename='js/intro_boot.js') }}"></script>
+</body>
+</html>

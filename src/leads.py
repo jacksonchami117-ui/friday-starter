@@ -1,72 +1,89 @@
 import os
 import csv
 import pandas as pd
-from flask import Blueprint, request, render_template, redirect, url_for, flash, current_app
+from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
 from werkzeug.utils import secure_filename
 
+# Create blueprint
 leads_bp = Blueprint("leads", __name__, url_prefix="/leads")
 
+# Allowed file extensions
 UPLOAD_EXT = {".csv", ".xlsx"}
 
-# Map messy CSV headers to clean names
-COLUMN_MAP = {
-    "first name": "First",
-    "firstname": "First",
-    "last name": "Last",
-    "lastname": "Last",
-    "phone number": "Phone",
-    "phone": "Phone",
-    "business": "Business",
-    "address": "Address",
-    "email": "Email",
-    "website": "Website",
-}
+# Ensure state folder exists
+DATA_DIR = os.getenv("DATA_DIR", os.path.join(os.path.dirname(__file__), "..", "state"))
+os.makedirs(DATA_DIR, exist_ok=True)
+accepted_path = os.path.join(DATA_DIR, "accepted_leads.csv")
+
 
 def normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
-    """Rename messy headers like 'First Name' -> 'First'"""
-    new_cols = []
-    for c in df.columns:
-        key = c.strip().lower()
-        new_cols.append(COLUMN_MAP.get(key, c.strip()))
-    df.columns = new_cols
+    """Normalize column names to consistent format."""
+    df.columns = [c.strip().title() for c in df.columns]
     return df
 
-@leads_bp.route("", methods=["GET", "POST"])
+
+@leads_bp.route("/", methods=["GET"])
 def leads_home():
-    data_dir = current_app.config["DATA_DIR"]
-    upload_dir = os.path.join(data_dir, "uploads")
-    accepted_path = os.path.join(data_dir, "accepted_leads.csv")
+    """Show upload form."""
+    return render_template("leads.html")
 
-    leads = []
-    if request.method == "POST":
-        f = request.files.get("file")
-        if not f:
-            flash("No file provided", "danger")
-            return redirect(url_for("leads.leads_home"))
 
-        ext = os.path.splitext(f.filename)[1].lower()
-        if ext not in UPLOAD_EXT:
-            flash("Unsupported file type", "danger")
-            return redirect(url_for("leads.leads_home"))
+@leads_bp.route("/upload", methods=["POST"])
+def upload_leads():
+    """Handle CSV/XLSX file upload."""
+    if "file" not in request.files:
+        flash("No file part", "danger")
+        return redirect(url_for("leads.leads_home"))
 
-        save_path = os.path.join(upload_dir, secure_filename(f.filename))
-        f.save(save_path)
+    f = request.files["file"]
+    if f.filename == "":
+        flash("No file selected", "danger")
+        return redirect(url_for("leads.leads_home"))
 
+    ext = os.path.splitext(f.filename)[1].lower()
+    if ext not in UPLOAD_EXT:
+        flash("Unsupported file type. Please upload CSV or XLSX.", "danger")
+        return redirect(url_for("leads.leads_home"))
+
+    # Save uploaded file
+    upload_dir = os.path.join(DATA_DIR, "uploads")
+    os.makedirs(upload_dir, exist_ok=True)
+    save_path = os.path.join(upload_dir, secure_filename(f.filename))
+    f.save(save_path)
+
+    # Load into DataFrame
+    try:
         if ext == ".csv":
             df = pd.read_csv(save_path)
         else:
             df = pd.read_excel(save_path)
+    except Exception as e:
+        current_app.logger.error(f"Error reading file: {e}")
+        flash(f"Error reading file: {e}", "danger")
+        return redirect(url_for("leads.leads_home"))
 
-        df = normalize_columns(df)
+    # Normalize and save
+    df = normalize_columns(df)
+    df.to_csv(accepted_path, index=False)
 
-        # Save accepted leads only
-        df.to_csv(accepted_path, index=False)
+    flash(f"Imported {len(df)} leads successfully.", "success")
+    return render_template("leads_confirm.html", rows=len(df), cols=list(df.columns))
 
-        flash(f"Imported {len(df)} leads.", "success")
 
-    if os.path.exists(accepted_path):
+@leads_bp.route("/list", methods=["GET"])
+def list_leads():
+    """Display uploaded leads in table view."""
+    if not os.path.exists(accepted_path):
+        flash("No leads uploaded yet.", "warning")
+        return redirect(url_for("leads.leads_home"))
+
+    try:
         with open(accepted_path, newline="") as f_in:
             reader = csv.DictReader(f_in)
             leads = list(reader)
+    except Exception as e:
+        current_app.logger.error(f"Error reading saved leads: {e}")
+        flash(f"Error reading saved leads: {e}", "danger")
+        return redirect(url_for("leads.leads_home"))
 
-    return render_template("leads.html", leads=leads)
+    return render_template("leads_list.html", leads=leads)

@@ -10,6 +10,7 @@ from src.render_routes import render_bp
 from src.exports import exports_bp
 from src.diagnostics_routes import diagnostics_bp
 from src.editor import editor_bp
+from src.logs import bp_logs
 
 def create_app():
     app = Flask(__name__)
@@ -49,6 +50,7 @@ def create_app():
     app.register_blueprint(exports_bp)
     app.register_blueprint(diagnostics_bp)
     app.register_blueprint(editor_bp)
+    app.register_blueprint(bp_logs)
 
     # Safety: global error handler
     @app.errorhandler(Exception)

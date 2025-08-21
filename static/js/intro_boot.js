@@ -20,14 +20,20 @@ async function runLog() {
   for (const l of lines) await typeLine(l,15);
 
   const box = [
-    "", "┌──────────────────────────────────────────┐",
+    "",
+    "",
+    "┌──────────────────────────────────────────┐",
     "│         W E L C O M E   T O              │",
     "│               F R I D A Y                │",
-    "└──────────────────────────────────────────┘", ""
+    "└──────────────────────────────────────────┘", 
+    "",
+    ""
   ];
   for (const row of box) await typeLine(row, 2);
 
+  await typeLine("", 1);
   await typeLine(`[${stamp()}] SYSTEM ONLINE ✅`, 15);
+  await typeLine("", 1);
   setTimeout(()=> window.location.href="/home", 2000);
 }
 

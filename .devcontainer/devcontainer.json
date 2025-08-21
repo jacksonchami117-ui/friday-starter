@@ -1,11 +1,12 @@
 {
-  "name": "Friday Starter (Python)",
+  "name": "FRIDAY Starter",
   "image": "mcr.microsoft.com/devcontainers/python:3.11",
   "postCreateCommand": "pip install -r requirements.txt",
-  "forwardPorts": [8081],
+  "postStartCommand": ".devcontainer/post-start.sh",
+  "forwardPorts": [10000],
   "portsAttributes": {
-    "8081": {
-      "label": "Friday App",
+    "10000": {
+      "label": "FRIDAY App",
       "onAutoForward": "openBrowser"
     }
   }

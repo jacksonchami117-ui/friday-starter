@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "segments": [
+    { "type": "video", "src": "state/uploads/sample1.mp4", "start": 0, "end": 3 },
+    { "type": "video", "src": "state/uploads/sample2.mp4", "start": 0, "end": 2 },
+    { "type": "text",  "text": "FRIDAY Starter", "start": 0.5, "end": 2.5, "fontsize": 48, "fontcolor": "white", "x": "(w-text_w)/2", "y": "(h-text_h)-80" }
+  ]
+}

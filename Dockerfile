@@ -26,4 +26,4 @@ ENV STATE_DIR=/data/state
 VOLUME ["/data"]
 EXPOSE 10000
 
-CMD ["gunicorn", "app:app", "-w", "2", "-k", "gthread", "--threads", "4", "--timeout", "240", "-b", "0.0.0.0:10000"]
+CMD ["sh","-c","exec gunicorn app:app -w 1 -k gthread --threads 8 --timeout 240 -b 0.0.0.0:${PORT:-10000}"]

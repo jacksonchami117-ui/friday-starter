@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+  <h1>Database Status</h1>
+  <a href="{{ url_for('leads.leads_home') }}" class="btn secondary">← Back to Leads</a>
+</div>
+
+<div class="card">
+  <h2>Configuration</h2>
+  <table class="status-table">
+    <tr>
+      <td><strong>USE_DB Environment Variable:</strong></td>
+      <td>
+        {% if status.use_db_configured %}
+          <span class="badge success">Enabled (USE_DB=1)</span>
+        {% else %}
+          <span class="badge warning">Disabled (USE_DB=0)</span>
+        {% endif %}
+      </td>
+    </tr>
+    <tr>
+      <td><strong>Database Mode Active:</strong></td>
+      <td>
+        {% if status.use_db_active %}
+          <span class="badge success">Yes</span>
+        {% else %}
+          <span class="badge info">No - Using CSV fallback</span>
+        {% endif %}
+      </td>
+    </tr>
+    <tr>
+      <td><strong>Database Available:</strong></td>
+      <td>
+        {% if status.db_available %}
+          <span class="badge success">Yes</span>
+        {% else %}
+          <span class="badge danger">No</span>
+        {% endif %}
+      </td>
+    </tr>
+    <tr>
+      <td><strong>Database Path:</strong></td>
+      <td><code>{{ status.db_path }}</code></td>
+    </tr>
+  </table>
+</div>
+
+{% if status.use_db_active and status.db_available %}
+<div class="card">
+  <h2>Database Statistics</h2>
+  <table class="status-table">
+    <tr>
+      <td><strong>Leads Count:</strong></td>
+      <td>{{ status.leads_count or 0 }}</td>
+    </tr>
+    <tr>
+      <td><strong>Jobs Count:</strong></td>
+      <td>{{ status.jobs_count or 0 }}</td>
+    </tr>
+    <tr>
+      <td><strong>Videos Count:</strong></td>
+      <td>{{ status.videos_count or 0 }}</td>
+    </tr>
+    {% if status.db_size_bytes %}
+    <tr>
+      <td><strong>Database Size:</strong></td>
+      <td>{{ "%.2f"|format(status.db_size_bytes / 1024) }} KB</td>
+    </tr>
+    {% endif %}
+  </table>
+</div>
+{% endif %}
+
+{% if status.error %}
+<div class="card">
+  <h2>Error</h2>
+  <div class="alert danger">
+    <strong>Database Error:</strong> {{ status.error }}
+  </div>
+</div>
+{% endif %}
+
+<div class="card">
+  <h2>How to Enable Database Mode</h2>
+  <p>To enable SQLite database persistence:</p>
+  <ol>
+    <li>Set the environment variable: <code>USE_DB=1</code></li>
+    <li>Restart the application</li>
+    <li>Existing CSV data will be automatically migrated</li>
+    <li>Database will be created at: <code>{{ status.db_path }}</code></li>
+  </ol>
+  
+  <p><strong>Benefits of database mode:</strong></p>
+  <ul>
+    <li>Better performance for large datasets</li>
+    <li>Advanced querying and analytics</li>
+    <li>Data integrity and relationships</li>
+    <li>Automatic backups and migrations</li>
+  </ul>
+  
+  <p><strong>Fallback behavior:</strong> If database initialization fails, the system automatically falls back to CSV mode with user notification.</p>
+</div>
+
+<style>
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.status-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.status-table td {
+  padding: 0.75rem;
+  border-bottom: 1px solid #dee2e6;
+  vertical-align: top;
+}
+
+.status-table td:first-child {
+  width: 30%;
+  font-weight: 500;
+}
+
+.badge {
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.badge.success { background: #d4edda; color: #155724; }
+.badge.warning { background: #fff3cd; color: #856404; }
+.badge.info { background: #d1ecf1; color: #0c5460; }
+.badge.danger { background: #f8d7da; color: #721c24; }
+
+.alert {
+  padding: 1rem;
+  border-radius: 0.25rem;
+  border: 1px solid;
+}
+
+.alert.danger {
+  background: #f8d7da;
+  color: #721c24;
+  border-color: #f5c6cb;
+}
+
+code {
+  background: #f8f9fa;
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.25rem;
+  font-family: 'Monaco', 'Consolas', monospace;
+}
+</style>
+{% endblock %}

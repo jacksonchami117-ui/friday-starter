@@ -1,32 +1,137 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>FRIDAY is online</h1>
-{% if pending_decisions and pending_decisions > 0 %}
-  <div class="banner warning">You have {{ pending_decisions }} pending decision(s). <a href="/decisions">Review →</a></div>
-{% else %}
-  <div class="banner success">All systems green.</div>
-{% endif %}
+<h1>FRIDAY Dashboard</h1>
+<div class="banner success">🚀 Video rendering system online and ready.</div>
 
 <div class="grid">
-  <div class="card">
-    <h2>Projects</h2>
-    <p>{{ projects|length }} projects</p>
+  <div class="card render-card">
+    <h2>🎬 Video Rendering</h2>
+    <p>Create personalized videos for your leads</p>
+    <div class="card-actions">
+      <a class="cta primary" href="/render/list">Render Jobs →</a>
+      <a class="cta secondary" href="/render/start" data-method="post">Start New Job</a>
+    </div>
+  </div>
+  
+  <div class="card leads-card">
+    <h2>👥 Leads Management</h2>
+    <p>Upload and manage your lead data</p>
+    <div class="card-actions">
+      <a class="cta primary" href="/leads">Manage Leads →</a>
+      <a class="cta secondary" href="/exports">Export Data</a>
+    </div>
+  </div>
+
+  <div class="card auth-card">
+    <h2>🔒 Authentication</h2>
+    <p>Secure access control system</p>
+    <div class="card-actions">
+      <a class="cta primary" href="/auth/status">Auth Status →</a>
+      <a class="cta secondary" href="/auth/logout">Logout</a>
+    </div>
+  </div>
+
+  <div class="card metrics-card">
+    <h2>📊 System Metrics</h2>
+    <p>Monitor system performance</p>
+    <div class="card-actions">
+      <a class="cta primary" href="/metrics">View Metrics →</a>
+      <a class="cta secondary" href="/health">Health Check</a>
+    </div>
+  </div>
+
+  <!-- Legacy sections -->
+  <div class="card legacy-card">
+    <h2>📁 Projects</h2>
+    <p>{{ projects|length if projects else 0 }} projects</p>
     <a class="cta" href="/projects">Open →</a>
   </div>
-  <div class="card">
-    <h2>SOPs</h2>
-    <p>{{ sops|length }} SOPs</p>
+  
+  <div class="card legacy-card">
+    <h2>📋 SOPs</h2>
+    <p>{{ sops|length if sops else 0 }} SOPs</p>
     <a class="cta" href="/sops">Open →</a>
   </div>
-  <div class="card">
-    <h2>Decisions</h2>
-    <p>{{ decisions|length }} decisions</p>
+  
+  <div class="card legacy-card">
+    <h2>⚖️ Decisions</h2>
+    <p>{{ decisions|length if decisions else 0 }} decisions</p>
     <a class="cta" href="/decisions">Open →</a>
   </div>
-  <div class="card">
-    <h2>Runs</h2>
-    <p>{{ runs|length }} runs</p>
+  
+  <div class="card legacy-card">
+    <h2>🏃 Runs</h2>
+    <p>{{ runs|length if runs else 0 }} runs</p>
     <a class="cta" href="/runs">Open →</a>
   </div>
 </div>
+
+<style>
+.render-card {
+  border-left: 4px solid #3b82f6;
+  background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+}
+
+.leads-card {
+  border-left: 4px solid #10b981;
+  background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+}
+
+.auth-card {
+  border-left: 4px solid #f59e0b;
+  background: linear-gradient(135deg, #fef3c7, #fde68a);
+}
+
+.metrics-card {
+  border-left: 4px solid #8b5cf6;
+  background: linear-gradient(135deg, #ede9fe, #ddd6fe);
+}
+
+.legacy-card {
+  opacity: 0.7;
+  border-left: 4px solid #6b7280;
+}
+
+.card-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.cta.primary {
+  background-color: var(--primary-color, #2563eb);
+  color: white;
+  padding: 0.5rem 1rem;
+  text-decoration: none;
+  border-radius: 4px;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.cta.primary:hover {
+  background-color: var(--primary-hover, #1d4ed8);
+}
+
+.cta.secondary {
+  background-color: transparent;
+  color: var(--primary-color, #2563eb);
+  padding: 0.5rem 1rem;
+  text-decoration: none;
+  border: 1px solid var(--primary-color, #2563eb);
+  border-radius: 4px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.cta.secondary:hover {
+  background-color: var(--primary-color, #2563eb);
+  color: white;
+}
+
+.banner.success {
+  background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+  border-left: 4px solid #10b981;
+  color: #065f46;
+}
+</style>
 {% endblock %}

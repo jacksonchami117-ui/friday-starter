@@ -1,0 +1,426 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="status-container">
+    <div class="header">
+        <h1>🎬 Render Job Status</h1>
+        <div class="header-actions">
+            <a href="{{ url_for('render.render_list') }}" class="btn btn-secondary">← Back to Jobs</a>
+            <button onclick="refreshStatus()" class="btn btn-primary">🔄 Refresh</button>
+        </div>
+    </div>
+
+    <div class="job-status-card">
+        <div class="status-header">
+            <h2>Job {{ job.id[:8] }}...</h2>
+            <span class="status-badge status-{{ job.status }}">{{ job.status.upper() }}</span>
+        </div>
+
+        <div class="status-details">
+            <div class="detail-section">
+                <h3>Job Information</h3>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <span class="detail-label">Job ID:</span>
+                        <span class="detail-value">{{ job.id }}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Type:</span>
+                        <span class="detail-value">{{ job.get('type', 'unknown') }}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Status:</span>
+                        <span class="detail-value status-{{ job.status }}">{{ job.status.upper() }}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Created:</span>
+                        <span class="detail-value">{{ job.created_at[:19] if job.created_at else 'N/A' }}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Updated:</span>
+                        <span class="detail-value">{{ job.updated_at[:19] if job.updated_at else 'N/A' }}</span>
+                    </div>
+                    {% if job.get('completed_at') %}
+                    <div class="detail-item">
+                        <span class="detail-label">Completed:</span>
+                        <span class="detail-value">{{ job.completed_at[:19] }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if job.get('progress') is not none %}
+            <div class="detail-section">
+                <h3>Progress</h3>
+                <div class="progress-section">
+                    <div class="progress-bar-large">
+                        <div class="progress-fill-large" style="width: {{ job.progress }}%"></div>
+                        <div class="progress-text-overlay">{{ job.progress }}%</div>
+                    </div>
+                    {% if job.get('message') %}
+                    <div class="progress-message">
+                        <span class="message-icon">💬</span>
+                        {{ job.message }}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if job.get('output_files') %}
+            <div class="detail-section">
+                <h3>Output Files ({{ job.output_files|length }})</h3>
+                <div class="files-grid">
+                    {% for file in job.output_files %}
+                    <div class="file-item">
+                        <div class="file-info">
+                            <span class="file-icon">🎥</span>
+                            <div class="file-details">
+                                <div class="file-name">{{ file.filename }}</div>
+                                <div class="file-meta">
+                                    Lead: {{ file.lead_name }} • 
+                                    Size: {{ (file.size / 1024)|round(1) }} KB
+                                </div>
+                            </div>
+                        </div>
+                        <div class="file-actions">
+                            <button class="btn btn-small btn-secondary" onclick="downloadFile('{{ file.filename }}')">
+                                📥 Download
+                            </button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if job.status == 'failed' and job.get('message') %}
+            <div class="detail-section error-section">
+                <h3>Error Details</h3>
+                <div class="error-message">
+                    <span class="error-icon">❌</span>
+                    {{ job.message }}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if job.status in ['processing', 'queued'] %}
+    <div class="auto-refresh-notice">
+        <span class="refresh-icon">🔄</span>
+        This page will auto-refresh every 5 seconds while the job is active.
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.status-container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.header h1 {
+    color: var(--primary-color, #2563eb);
+    margin: 0;
+}
+
+.header-actions {
+    display: flex;
+    gap: 1rem;
+}
+
+.btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: 500;
+    cursor: pointer;
+    display: inline-block;
+    transition: all 0.2s;
+}
+
+.btn-small {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+}
+
+.btn-primary {
+    background-color: var(--primary-color, #2563eb);
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: var(--primary-hover, #1d4ed8);
+}
+
+.btn-secondary {
+    background-color: var(--secondary-color, #6b7280);
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: var(--secondary-hover, #4b5563);
+}
+
+.job-status-card {
+    background: white;
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.status-header {
+    background: var(--card-header-bg, #f9fafb);
+    padding: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-color, #e5e7eb);
+}
+
+.status-header h2 {
+    margin: 0;
+    color: var(--primary-color, #2563eb);
+}
+
+.status-badge {
+    padding: 0.5rem 1rem;
+    border-radius: 1rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.status-queued {
+    background-color: #fef3c7;
+    color: #92400e;
+}
+
+.status-processing {
+    background-color: #dbeafe;
+    color: #1e40af;
+}
+
+.status-done {
+    background-color: #d1fae5;
+    color: #065f46;
+}
+
+.status-failed {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+
+.status-details {
+    padding: 0;
+}
+
+.detail-section {
+    padding: 2rem;
+    border-bottom: 1px solid var(--border-color, #e5e7eb);
+}
+
+.detail-section:last-child {
+    border-bottom: none;
+}
+
+.detail-section h3 {
+    color: var(--primary-color, #2563eb);
+    margin-bottom: 1.5rem;
+    font-size: 1.25rem;
+}
+
+.detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+}
+
+.detail-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    background: var(--card-bg, #f9fafb);
+    border-radius: 6px;
+}
+
+.detail-label {
+    font-weight: 500;
+    color: var(--text-secondary, #6b7280);
+}
+
+.detail-value {
+    color: var(--text-primary, #111827);
+    font-weight: 500;
+}
+
+.progress-section {
+    space-y: 1rem;
+}
+
+.progress-bar-large {
+    position: relative;
+    height: 3rem;
+    background-color: #e5e7eb;
+    border-radius: 1.5rem;
+    overflow: hidden;
+    margin-bottom: 1rem;
+}
+
+.progress-fill-large {
+    height: 100%;
+    background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+    transition: width 0.5s ease-in-out;
+}
+
+.progress-text-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-weight: 600;
+    color: white;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.progress-message {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1rem;
+    background: var(--card-bg, #f0f9ff);
+    border-radius: 6px;
+    border-left: 4px solid #3b82f6;
+}
+
+.message-icon {
+    font-size: 1.25rem;
+}
+
+.files-grid {
+    display: grid;
+    gap: 1rem;
+}
+
+.file-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background: var(--card-bg, #f9fafb);
+    border-radius: 8px;
+    border: 1px solid var(--border-color, #e5e7eb);
+}
+
+.file-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.file-icon {
+    font-size: 1.5rem;
+}
+
+.file-details {
+    display: flex;
+    flex-direction: column;
+}
+
+.file-name {
+    font-weight: 500;
+    color: var(--text-primary, #111827);
+}
+
+.file-meta {
+    font-size: 0.875rem;
+    color: var(--text-secondary, #6b7280);
+}
+
+.error-section {
+    background: #fef2f2;
+}
+
+.error-message {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem;
+    background: white;
+    border-radius: 6px;
+    border-left: 4px solid #ef4444;
+    color: #991b1b;
+}
+
+.error-icon {
+    font-size: 1.25rem;
+}
+
+.auto-refresh-notice {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 2rem;
+    padding: 1rem;
+    background: var(--card-bg, #f0f9ff);
+    border: 1px solid #3b82f6;
+    border-radius: 6px;
+    color: #1e40af;
+    font-size: 0.875rem;
+}
+
+.refresh-icon {
+    animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+</style>
+
+<script>
+function refreshStatus() {
+    window.location.reload();
+}
+
+function downloadFile(filename) {
+    // In a real implementation, this would download the file
+    alert('Download functionality would be implemented here for: ' + filename);
+    // window.open('/media/outputs/videos/' + filename, '_blank');
+}
+
+// Auto-refresh for active jobs
+{% if job.status in ['processing', 'queued'] %}
+setInterval(refreshStatus, 5000);
+{% endif %}
+
+// API status check
+function checkJobStatus() {
+    fetch('{{ url_for("render.api_job_status", job_id=job.id) }}')
+        .then(response => response.json())
+        .then(data => {
+            if (data.status !== '{{ job.status }}') {
+                refreshStatus();
+            }
+        })
+        .catch(error => console.error('Error checking job status:', error));
+}
+
+// Check status more frequently than full refresh
+{% if job.status in ['processing', 'queued'] %}
+setInterval(checkJobStatus, 2000);
+{% endif %}
+</script>
+{% endblock %}

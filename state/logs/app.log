@@ -25,3 +25,73 @@
  * Running on http://10.0.1.44:5000
 2025-08-21 00:37:00,342 [INFO] [33mPress CTRL+C to quit[0m
 2025-08-21 00:38:54,564 [INFO] === FRIDAY System Startup ===
+2025-08-21 08:46:33,387 [INFO] === FRIDAY System Startup ===
+2025-08-21 08:46:58,805 [INFO] === FRIDAY System Startup ===
+2025-08-21 08:46:58,821 [INFO] [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://10.1.0.217:5000
+2025-08-21 08:46:58,821 [INFO] [33mPress CTRL+C to quit[0m
+2025-08-21 08:46:58,822 [INFO]  * Restarting with stat
+2025-08-21 08:46:59,187 [INFO] === FRIDAY System Startup ===
+2025-08-21 08:46:59,199 [WARNING]  * Debugger is active!
+2025-08-21 08:46:59,201 [INFO]  * Debugger PIN: 778-367-121
+2025-08-21 08:47:17,231 [INFO] 127.0.0.1 - - [21/Aug/2025 08:47:17] "GET /health HTTP/1.1" 200 -
+2025-08-21 08:47:23,901 [INFO] 127.0.0.1 - - [21/Aug/2025 08:47:23] "GET /auth/login HTTP/1.1" 200 -
+2025-08-21 08:47:30,860 [INFO] 127.0.0.1 - - [21/Aug/2025 08:47:30] "[32mGET /render/list HTTP/1.1[0m" 302 -
+2025-08-21 08:48:11,814 [INFO] 127.0.0.1 - - [21/Aug/2025 08:48:11] "GET /health HTTP/1.1" 200 -
+2025-08-21 08:48:11,821 [INFO] 127.0.0.1 - - [21/Aug/2025 08:48:11] "GET /auth/login HTTP/1.1" 200 -
+2025-08-21 08:48:11,827 [INFO] 127.0.0.1 - - [21/Aug/2025 08:48:11] "[32mGET /render/list HTTP/1.1[0m" 302 -
+2025-08-21 08:48:11,834 [INFO] 127.0.0.1 - - [21/Aug/2025 08:48:11] "GET /auth/login HTTP/1.1" 200 -
+2025-08-21 08:48:11,842 [INFO] 127.0.0.1 - - [21/Aug/2025 08:48:11] "[32mPOST /auth/login HTTP/1.1[0m" 302 -
+2025-08-21 08:48:11,870 [INFO] 127.0.0.1 - - [21/Aug/2025 08:48:11] "GET /render/list HTTP/1.1" 200 -
+2025-08-21 08:48:11,878 [INFO] Started render job 71603399-41bd-43e2-bda9-9d4e978b035f
+2025-08-21 08:48:11,878 [INFO] 127.0.0.1 - - [21/Aug/2025 08:48:11] "[32mPOST /render/start HTTP/1.1[0m" 302 -
+2025-08-21 08:48:14,889 [INFO] 127.0.0.1 - - [21/Aug/2025 08:48:14] "GET /render/api/jobs HTTP/1.1" 200 -
+2025-08-21 08:49:21,924 [INFO]  * Detected change in '/home/runner/work/friday-starter/friday-starter/src/render.py', reloading
+2025-08-21 08:49:21,996 [INFO]  * Restarting with stat
+2025-08-21 08:49:22,360 [INFO] === FRIDAY System Startup ===
+2025-08-21 08:49:22,371 [WARNING]  * Debugger is active!
+2025-08-21 08:49:22,374 [INFO]  * Debugger PIN: 778-367-121
+2025-08-21 08:49:30,426 [INFO]  * Detected change in '/home/runner/work/friday-starter/friday-starter/src/render.py', reloading
+2025-08-21 08:49:30,480 [INFO]  * Restarting with stat
+2025-08-21 08:49:30,850 [INFO] === FRIDAY System Startup ===
+2025-08-21 08:49:30,861 [WARNING]  * Debugger is active!
+2025-08-21 08:49:30,864 [INFO]  * Debugger PIN: 778-367-121
+2025-08-21 08:49:40,041 [INFO] === FRIDAY System Startup ===
+2025-08-21 08:49:40,056 [INFO] [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://10.1.0.217:5000
+2025-08-21 08:49:40,056 [INFO] [33mPress CTRL+C to quit[0m
+2025-08-21 08:49:40,057 [INFO]  * Restarting with stat
+2025-08-21 08:49:40,431 [INFO] === FRIDAY System Startup ===
+2025-08-21 08:49:40,443 [WARNING]  * Debugger is active!
+2025-08-21 08:49:40,445 [INFO]  * Debugger PIN: 778-367-121
+2025-08-21 08:50:03,288 [INFO] 127.0.0.1 - - [21/Aug/2025 08:50:03] "[32mPOST /auth/login HTTP/1.1[0m" 302 -
+2025-08-21 08:50:03,296 [INFO] Started render job 97e5a7f4-c7d0-4503-8c13-48cf6a3039ef
+2025-08-21 08:50:03,297 [INFO] 127.0.0.1 - - [21/Aug/2025 08:50:03] "[32mPOST /render/start HTTP/1.1[0m" 302 -
+2025-08-21 08:50:05,803 [INFO] Render job 97e5a7f4-c7d0-4503-8c13-48cf6a3039ef completed successfully
+2025-08-21 08:50:06,306 [INFO] 127.0.0.1 - - [21/Aug/2025 08:50:06] "GET /render/api/jobs HTTP/1.1" 200 -
+2025-08-21 08:50:25,511 [INFO] 127.0.0.1 - - [21/Aug/2025 08:50:25] "GET /health HTTP/1.1" 200 -
+2025-08-21 08:50:25,526 [INFO] 127.0.0.1 - - [21/Aug/2025 08:50:25] "GET /auth/login HTTP/1.1" 200 -
+2025-08-21 08:50:25,532 [INFO] 127.0.0.1 - - [21/Aug/2025 08:50:25] "[32mGET /render/list HTTP/1.1[0m" 302 -
+2025-08-21 08:50:25,539 [INFO] 127.0.0.1 - - [21/Aug/2025 08:50:25] "GET /auth/login HTTP/1.1" 200 -
+2025-08-21 08:50:25,546 [INFO] 127.0.0.1 - - [21/Aug/2025 08:50:25] "[32mPOST /auth/login HTTP/1.1[0m" 302 -
+2025-08-21 08:50:25,562 [INFO] 127.0.0.1 - - [21/Aug/2025 08:50:25] "GET /render/list HTTP/1.1" 200 -
+2025-08-21 08:50:25,569 [INFO] Started render job c72749ac-4dbd-41be-89b1-3609e7620ebf
+2025-08-21 08:50:25,570 [INFO] 127.0.0.1 - - [21/Aug/2025 08:50:25] "[32mPOST /render/start HTTP/1.1[0m" 302 -
+2025-08-21 08:50:28,073 [INFO] Render job c72749ac-4dbd-41be-89b1-3609e7620ebf completed successfully
+2025-08-21 08:50:28,582 [INFO] 127.0.0.1 - - [21/Aug/2025 08:50:28] "GET /render/api/jobs HTTP/1.1" 200 -
+2025-08-21 08:50:35,868 [INFO] 127.0.0.1 - - [21/Aug/2025 08:50:35] "GET /leads/ HTTP/1.1" 200 -
+2025-08-21 08:50:44,004 [INFO] 127.0.0.1 - - [21/Aug/2025 08:50:44] "GET /render/list HTTP/1.1" 200 -
+2025-08-21 08:50:56,827 [INFO]  * Detected change in '/home/runner/work/friday-starter/friday-starter/app.py', reloading
+2025-08-21 08:50:56,878 [INFO]  * Restarting with stat
+2025-08-21 08:50:57,252 [INFO] === FRIDAY System Startup ===
+2025-08-21 08:50:57,265 [WARNING]  * Debugger is active!
+2025-08-21 08:50:57,267 [INFO]  * Debugger PIN: 778-367-121
+2025-08-21 08:51:07,329 [INFO]  * Detected change in '/home/runner/work/friday-starter/friday-starter/app.py', reloading
+2025-08-21 08:51:07,419 [INFO]  * Restarting with stat
+2025-08-21 08:51:07,788 [INFO] === FRIDAY System Startup ===
+2025-08-21 08:51:07,800 [WARNING]  * Debugger is active!
+2025-08-21 08:51:07,802 [INFO]  * Debugger PIN: 778-367-121

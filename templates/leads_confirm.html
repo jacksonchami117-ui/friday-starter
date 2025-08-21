@@ -26,6 +26,7 @@
   <div class="counts">
     <p><b>Accepted rows:</b> {{ rows }}</p>
     <p><b>Rejected rows:</b> {{ rejected }}</p>
+    <p><b>Duplicates:</b> {{ duplicates or 0 }}</p>
   </div>
   <p><b>Detected Columns:</b></p>
   <ul>{% for col in cols %}<li>{{ col }}</li>{% endfor %}</ul>

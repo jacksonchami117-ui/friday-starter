@@ -34,13 +34,13 @@ def validate_row(row: dict):
     required_any = ["email", "Email", "e-mail"]
     if not any(row.get(k, "").strip() for k in row.keys() if k in required_any):
         reasons.append("Missing email")
-    # Rough email check
+    # Stricter email check
     email_val = None
     for k in ["Email", "email", "E-mail"]:
         if k in row:
             email_val = str(row.get(k, "")).strip()
             break
-    if email_val and not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email_val):
+    if email_val and not re.match(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$", email_val):
         reasons.append("Invalid email format")
     return reasons
 
@@ -83,10 +83,34 @@ def upload_leads():
 
     df = normalize_columns(df)
 
-    # Validate
-    accepted_rows, rejected_rows = [], []
+    # Dedupe by email (case-insensitive) and validate
+    accepted_rows, rejected_rows, duplicates = [], [], []
+    seen_emails = set()
+    
+    def get_email_from_row(row_data):
+        """Extract email value from row, checking common email column names"""
+        for k in ["Email", "email", "E-mail"]:
+            if k in row_data:
+                email_val = str(row_data.get(k, "")).strip()
+                if email_val:
+                    return email_val.lower()
+        return None
+    
     for _, row in df.iterrows():
         data = row.to_dict()
+        email = get_email_from_row(data)
+        
+        # Check for duplicates
+        if email and email in seen_emails:
+            data["Reason"] = "Duplicate email"
+            duplicates.append(data)
+            continue
+            
+        # Add email to seen set if it exists
+        if email:
+            seen_emails.add(email)
+            
+        # Validate row
         reasons = validate_row(data)
         if reasons:
             data["Reason"] = "; ".join(reasons)
@@ -103,20 +127,22 @@ def upload_leads():
             for r in accepted_rows:
                 writer.writerow({k: r.get(k, "") for k in acc_cols})
 
-    # Write rejected
+    # Write rejected (including duplicates)
+    all_rejected = rejected_rows + duplicates
     rej_cols = list(df.columns) + (["Reason"] if "Reason" not in df.columns else [])
-    if rejected_rows:
+    if all_rejected:
         with open(paths["rejected"], "w", newline="", encoding="utf-8") as f_out:
             writer = csv.DictWriter(f_out, fieldnames=rej_cols)
             writer.writeheader()
-            for r in rejected_rows:
+            for r in all_rejected:
                 writer.writerow({k: r.get(k, "") for k in rej_cols})
 
-    flash(f"Uploaded {len(df)} rows → Accepted: {len(accepted_rows)}, Rejected: {len(rejected_rows)}", "success")
+    flash(f"Uploaded {len(df)} rows → Accepted: {len(accepted_rows)}, Rejected: {len(rejected_rows)}, Duplicates: {len(duplicates)}", "success")
     return render_template(
         "leads_confirm.html",
         rows=len(accepted_rows),
         rejected=len(rejected_rows),
+        duplicates=len(duplicates),
         cols=list(df.columns)
     )
 

@@ -1,32 +1,3 @@
-{% extends "base.html" %}
-{% block content %}
-<h1>FRIDAY is online</h1>
-{% if pending_decisions and pending_decisions > 0 %}
-  <div class="banner warning">You have {{ pending_decisions }} pending decision(s). <a href="/decisions">Review →</a></div>
-{% else %}
-  <div class="banner success">All systems green.</div>
-{% endif %}
+<!-- Contents of dashboard.html -->
+<!-- Include your HTML markup here -->
 
-<div class="grid">
-  <div class="card">
-    <h2>Projects</h2>
-    <p>{{ projects|length }} projects</p>
-    <a class="cta" href="/projects">Open →</a>
-  </div>
-  <div class="card">
-    <h2>SOPs</h2>
-    <p>{{ sops|length }} SOPs</p>
-    <a class="cta" href="/sops">Open →</a>
-  </div>
-  <div class="card">
-    <h2>Decisions</h2>
-    <p>{{ decisions|length }} decisions</p>
-    <a class="cta" href="/decisions">Open →</a>
-  </div>
-  <div class="card">
-    <h2>Runs</h2>
-    <p>{{ runs|length }} runs</p>
-    <a class="cta" href="/runs">Open →</a>
-  </div>
-</div>
-{% endblock %}

@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,35 +5,93 @@
   <title>Rejected Leads</title>
   <style>
     body { font-family: Arial, sans-serif; padding: 20px; background: #f9f9f9; }
+    h1 { margin-bottom: 15px; }
+    .actions { margin-bottom: 10px; }
+    .search-bar { position: sticky; top: 0; background: #fff; padding: 10px;
+      border-bottom: 2px solid #ccc; z-index: 10; }
+    .search-bar input { width: 250px; padding: 6px; font-size: 14px; }
     table { width: 100%; border-collapse: collapse; margin-top: 15px; }
     th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-    th { background: #efefef; }
+    th { background: #efefef; cursor: pointer; }
+    tr:nth-child(even) { background: #f2f2f2; }
+    tr:hover { background: #ffe9e9; }
+    .btn { padding: 6px 10px; border: 1px solid #333; background: #991b1b; color: #fff; text-decoration: none; border-radius: 6px; }
+    .reason { color: #b91c1c; font-weight: bold; }
   </style>
 </head>
 <body>
-  <h1>Rejected Leads</h1>
+  <h1>🚫 Rejected Leads</h1>
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <ul>
+        {% for category, message in messages %}
+          <li><strong>{{ category|upper }}:</strong> {{ message }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  {% endwith %}
+
+  <div class="actions">
+    <a class="btn" href="{{ url_for('leads.leads_home') }}">⬅ Back to Upload</a>
+  </div>
+
+  <div class="search-bar"><label for="search">Search: </label>
+    <input type="text" id="search" placeholder="Type to filter rejected leads..."></div>
+
   {% if rows %}
-  <table>
+  <table id="rejectedTable">
     <thead>
       <tr>
+        <th onclick="sortTable(0)">#</th>
         {% for col in rows[0].keys() %}
-          <th>{{ col }}</th>
+          <th onclick="sortTable({{ loop.index }})">{{ col }}</th>
         {% endfor %}
       </tr>
     </thead>
     <tbody>
       {% for row in rows %}
-        <tr>
-          {% for val in row.values() %}
+      <tr>
+        <td>{{ loop.index }}</td>
+        {% for key, val in row.items() %}
+          {% if key == "Reason" %}
+            <td class="reason">{{ val }}</td>
+          {% else %}
             <td>{{ val }}</td>
-          {% endfor %}
-        </tr>
+          {% endif %}
+        {% endfor %}
+      </tr>
       {% endfor %}
     </tbody>
   </table>
   {% else %}
-    <p>No rejected leads.</p>
+    <p>No rejected leads available.</p>
   {% endif %}
-  <br><a href="{{ url_for('leads.leads_home') }}">← Back to Upload</a>
+
+  <br><a href="{{ url_for('index') }}">← Back to Dashboard</a>
+
+  <script>
+    document.getElementById("search").addEventListener("keyup", function () {
+      let filter = this.value.toLowerCase();
+      document.querySelectorAll("#rejectedTable tbody tr").forEach(row => {
+        row.style.display = row.innerText.toLowerCase().includes(filter) ? "" : "none";
+      });
+    });
+
+    function sortTable(n) {
+      let table = document.getElementById("rejectedTable"), switching = true, dir = "asc", switchcount = 0;
+      while (switching) {
+        switching = false; let rows = table.rows;
+        for (let i = 1; i < rows.length - 1; i++) {
+          let shouldSwitch = false;
+          let x = rows[i].getElementsByTagName("TD")[n];
+          let y = rows[i + 1].getElementsByTagName("TD")[n];
+          if (dir === "asc" && x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) shouldSwitch = true;
+          else if (dir === "desc" && x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) shouldSwitch = true;
+          if (shouldSwitch) { rows[i].parentNode.insertBefore(rows[i + 1], rows[i]); switching = true; switchcount++; break; }
+        }
+        if (switchcount === 0 && dir === "asc") { dir = "desc"; switching = true; }
+      }
+    }
+  </script>
 </body>
 </html>

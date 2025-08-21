@@ -1,8 +1,8 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"><title>Uploaded Leads</title>
+  <meta charset="UTF-8">
+  <title>Uploaded Leads</title>
   <style>
     body { font-family: Arial, sans-serif; padding: 20px; background: #f9f9f9; }
     h1 { margin-bottom: 15px; }
@@ -38,6 +38,7 @@
 
   <div class="search-bar"><label for="search">Search: </label>
     <input type="text" id="search" placeholder="Type to filter leads..."></div>
+
   {% if leads %}
   <table id="leadsTable">
     <thead>
@@ -62,7 +63,9 @@
   {% else %}
     <p>No leads uploaded yet.</p>
   {% endif %}
+
   <br><a href="{{ url_for('index') }}">← Back to Dashboard</a>
+
   <script>
     document.getElementById("search").addEventListener("keyup", function () {
       let filter = this.value.toLowerCase();
@@ -70,6 +73,7 @@
         row.style.display = row.innerText.toLowerCase().includes(filter) ? "" : "none";
       });
     });
+
     function sortTable(n) {
       let table = document.getElementById("leadsTable"), switching = true, dir = "asc", switchcount = 0;
       while (switching) {

@@ -28,16 +28,26 @@ body {
   background: linear-gradient(180deg, #0b0c11, #0e1016);
   border: 1px solid #151923;
   border-radius: 12px;
-  padding: 20px;
+  padding: 32px 24px;
   overflow: hidden;
   position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .console::after {
   content: ""; position: absolute; inset: 0;
   background: linear-gradient(180deg, transparent, rgba(168,85,247,0.06));
   pointer-events: none;
 }
-.console-text { margin: 0; white-space: pre-wrap; line-height: 1.55; }
+.console-text { 
+  margin: 0; 
+  white-space: pre-wrap; 
+  line-height: 1.6;
+  width: 100%;
+  text-align: center;
+  max-width: 600px;
+}
 
 .pixels {
   position: relative;

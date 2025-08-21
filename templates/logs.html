@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Application Logs</h1>
+
+<div class="banner" style="margin-bottom: 16px;">
+  <strong>Showing last {{ log_count }} lines</strong> from application log file
+</div>
+
+<div class="card" style="max-height: 70vh; overflow-y: auto; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; line-height: 1.4;">
+  {% if log_lines %}
+    {% for line in log_lines %}
+      <div style="padding: 2px 0; border-bottom: 1px solid rgba(42, 46, 61, 0.3); white-space: pre-wrap;">{{ line }}</div>
+    {% endfor %}
+  {% else %}
+    <div style="color: var(--muted); text-align: center; padding: 40px;">No logs available</div>
+  {% endif %}
+</div>
+
+<div style="margin-top: 16px;">
+  <a class="btn" href="{{ url_for('index') }}">← Back to Dashboard</a>
+  <a class="btn" href="{{ url_for('logs.logs_viewer') }}" style="margin-left: 8px;">🔄 Refresh</a>
+</div>
+
+<script>
+// Auto-scroll to bottom on page load to show latest logs
+document.addEventListener('DOMContentLoaded', function() {
+  const logContainer = document.querySelector('.card');
+  if (logContainer) {
+    logContainer.scrollTop = logContainer.scrollHeight;
+  }
+});
+</script>
+{% endblock %}

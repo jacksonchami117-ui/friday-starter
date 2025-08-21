@@ -1,0 +1,505 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="analytics-header">
+  <h1>Analytics Dashboard</h1>
+  <div class="analytics-controls">
+    <button class="btn secondary" onclick="refreshData()">Refresh</button>
+    <div class="export-dropdown">
+      <button class="btn secondary" onclick="toggleExportMenu()">Export ↓</button>
+      <div class="dropdown-menu" id="exportMenu" style="display: none;">
+        <a href="#" onclick="exportData('all')">All Data</a>
+        <a href="#" onclick="exportData('leads')">Leads Only</a>
+        <a href="#" onclick="exportData('videos')">Videos Only</a>
+        <a href="#" onclick="exportData('performance')">Performance Only</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Summary Stats -->
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-number" id="totalLeads">Loading...</div>
+    <div class="stat-label">Leads Processed</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-number" id="totalVideos">Loading...</div>
+    <div class="stat-label">Videos Generated</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-number" id="successRate">Loading...</div>
+    <div class="stat-label">Success Rate</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-number" id="avgTime">Loading...</div>
+    <div class="stat-label">Avg Processing Time</div>
+  </div>
+</div>
+
+<!-- Charts Grid -->
+<div class="charts-grid">
+  <!-- Lead Processing Chart -->
+  <div class="card chart-card">
+    <h3>Lead Processing Trends</h3>
+    <canvas id="leadProcessingChart" width="400" height="200"></canvas>
+  </div>
+
+  <!-- Video Generation Chart -->
+  <div class="card chart-card">
+    <h3>Video Generation Metrics</h3>
+    <canvas id="videoGenerationChart" width="400" height="200"></canvas>
+  </div>
+
+  <!-- System Performance Chart -->
+  <div class="card chart-card">
+    <h3>System Performance</h3>
+    <canvas id="performanceChart" width="400" height="200"></canvas>
+  </div>
+
+  <!-- Lead Sources Pie Chart -->
+  <div class="card chart-card">
+    <h3>Lead Sources Distribution</h3>
+    <canvas id="leadSourcesChart" width="400" height="200"></canvas>
+  </div>
+
+  <!-- Video Types Doughnut Chart -->
+  <div class="card chart-card">
+    <h3>Video Types</h3>
+    <canvas id="videoTypesChart" width="400" height="200"></canvas>
+  </div>
+
+  <!-- Processing Time Distribution -->
+  <div class="card chart-card">
+    <h3>Processing Time Distribution</h3>
+    <canvas id="processingTimeChart" width="400" height="200"></canvas>
+  </div>
+</div>
+
+<!-- Current System Status -->
+<div class="card">
+  <h3>Current System Status</h3>
+  <div class="status-grid">
+    <div class="status-item">
+      <label>CPU Usage</label>
+      <div class="progress-bar">
+        <div class="progress-fill" id="currentCPU" style="width: 0%"></div>
+      </div>
+      <span id="cpuText">0%</span>
+    </div>
+    <div class="status-item">
+      <label>Memory Usage</label>
+      <div class="progress-bar">
+        <div class="progress-fill" id="currentMemory" style="width: 0%"></div>
+      </div>
+      <span id="memoryText">0%</span>
+    </div>
+    <div class="status-item">
+      <label>Disk Usage</label>
+      <div class="progress-bar">
+        <div class="progress-fill" id="currentDisk" style="width: 0%"></div>
+      </div>
+      <span id="diskText">0%</span>
+    </div>
+  </div>
+</div>
+
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+
+<style>
+.analytics-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.analytics-controls {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.export-dropdown {
+  position: relative;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: white;
+  border: 1px solid #dee2e6;
+  border-radius: 0.25rem;
+  min-width: 150px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  z-index: 1000;
+}
+
+.dropdown-menu a {
+  display: block;
+  padding: 0.5rem 1rem;
+  color: #333;
+  text-decoration: none;
+}
+
+.dropdown-menu a:hover {
+  background: #f8f9fa;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.stat-card {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 0.5rem;
+  border: 1px solid #dee2e6;
+  text-align: center;
+}
+
+.stat-number {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #007bff;
+  margin-bottom: 0.5rem;
+}
+
+.stat-label {
+  color: #6c757d;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.chart-card {
+  padding: 1.5rem;
+}
+
+.chart-card h3 {
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+  color: #333;
+}
+
+.status-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.status-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.status-item label {
+  min-width: 120px;
+  font-weight: 600;
+  color: #333;
+}
+
+.progress-bar {
+  flex: 1;
+  height: 1rem;
+  background: #e9ecef;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #28a745, #ffc107, #dc3545);
+  transition: width 0.3s ease;
+}
+
+.status-item span {
+  min-width: 50px;
+  font-weight: 600;
+  color: #333;
+}
+
+@media (max-width: 768px) {
+  .charts-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .analytics-header {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: stretch;
+  }
+}
+</style>
+
+<script>
+let charts = {};
+
+async function loadAnalyticsData() {
+  try {
+    const response = await fetch('/analytics/data');
+    const result = await response.json();
+    
+    if (result.status === 'success') {
+      updateSummaryStats(result.data.summary_stats);
+      createCharts(result.data);
+      updateSystemStatus(result.data.summary_stats);
+    } else {
+      console.error('Error loading analytics data:', result.message);
+    }
+  } catch (error) {
+    console.error('Error loading analytics data:', error);
+  }
+}
+
+function updateSummaryStats(stats) {
+  document.getElementById('totalLeads').textContent = stats.total_leads_processed.toLocaleString();
+  document.getElementById('totalVideos').textContent = stats.total_videos_generated.toLocaleString();
+  document.getElementById('successRate').textContent = stats.avg_success_rate.toFixed(1) + '%';
+  document.getElementById('avgTime').textContent = Math.round(stats.avg_processing_time) + 'm';
+}
+
+function createCharts(data) {
+  // Lead Processing Chart (Line)
+  const leadCtx = document.getElementById('leadProcessingChart').getContext('2d');
+  if (charts.leadProcessing) charts.leadProcessing.destroy();
+  charts.leadProcessing = new Chart(leadCtx, {
+    type: 'line',
+    data: {
+      labels: data.lead_processing.dates,
+      datasets: [
+        {
+          label: 'Processed',
+          data: data.lead_processing.processed,
+          borderColor: '#007bff',
+          backgroundColor: 'rgba(0, 123, 255, 0.1)',
+          fill: true
+        },
+        {
+          label: 'Accepted',
+          data: data.lead_processing.accepted,
+          borderColor: '#28a745',
+          backgroundColor: 'rgba(40, 167, 69, 0.1)',
+          fill: true
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: {
+          beginAtZero: true
+        }
+      }
+    }
+  });
+
+  // Video Generation Chart (Bar)
+  const videoCtx = document.getElementById('videoGenerationChart').getContext('2d');
+  if (charts.videoGeneration) charts.videoGeneration.destroy();
+  charts.videoGeneration = new Chart(videoCtx, {
+    type: 'bar',
+    data: {
+      labels: data.video_generation.dates.slice(-7), // Last 7 days
+      datasets: [
+        {
+          label: 'Videos Generated',
+          data: data.video_generation.generated.slice(-7),
+          backgroundColor: '#6f42c1'
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: {
+          beginAtZero: true
+        }
+      }
+    }
+  });
+
+  // System Performance Chart (Line)
+  const perfCtx = document.getElementById('performanceChart').getContext('2d');
+  if (charts.performance) charts.performance.destroy();
+  charts.performance = new Chart(perfCtx, {
+    type: 'line',
+    data: {
+      labels: data.system_performance.dates.slice(-14), // Last 14 days
+      datasets: [
+        {
+          label: 'CPU %',
+          data: data.system_performance.cpu_usage.slice(-14),
+          borderColor: '#dc3545',
+          backgroundColor: 'rgba(220, 53, 69, 0.1)'
+        },
+        {
+          label: 'Memory %',
+          data: data.system_performance.memory_usage.slice(-14),
+          borderColor: '#ffc107',
+          backgroundColor: 'rgba(255, 193, 7, 0.1)'
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: {
+          beginAtZero: true,
+          max: 100
+        }
+      }
+    }
+  });
+
+  // Lead Sources Pie Chart
+  const sourcesCtx = document.getElementById('leadSourcesChart').getContext('2d');
+  if (charts.leadSources) charts.leadSources.destroy();
+  charts.leadSources = new Chart(sourcesCtx, {
+    type: 'pie',
+    data: {
+      labels: data.lead_sources.labels,
+      datasets: [{
+        data: data.lead_sources.data,
+        backgroundColor: [
+          '#007bff', '#28a745', '#ffc107', '#dc3545', '#6f42c1'
+        ]
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false
+    }
+  });
+
+  // Video Types Doughnut Chart
+  const typesCtx = document.getElementById('videoTypesChart').getContext('2d');
+  if (charts.videoTypes) charts.videoTypes.destroy();
+  charts.videoTypes = new Chart(typesCtx, {
+    type: 'doughnut',
+    data: {
+      labels: data.video_types.labels,
+      datasets: [{
+        data: data.video_types.data,
+        backgroundColor: [
+          '#20c997', '#fd7e14', '#e83e8c', '#6610f2', '#17a2b8'
+        ]
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false
+    }
+  });
+
+  // Processing Time Distribution Bar Chart
+  const timeCtx = document.getElementById('processingTimeChart').getContext('2d');
+  if (charts.processingTime) charts.processingTime.destroy();
+  charts.processingTime = new Chart(timeCtx, {
+    type: 'bar',
+    data: {
+      labels: data.processing_time_distribution.labels,
+      datasets: [{
+        label: 'Jobs',
+        data: data.processing_time_distribution.data,
+        backgroundColor: '#17a2b8'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: {
+          beginAtZero: true
+        }
+      }
+    }
+  });
+}
+
+function updateSystemStatus(stats) {
+  const cpuFill = document.getElementById('currentCPU');
+  const memoryFill = document.getElementById('currentMemory');
+  const diskFill = document.getElementById('currentDisk');
+  
+  const cpuText = document.getElementById('cpuText');
+  const memoryText = document.getElementById('memoryText');
+  const diskText = document.getElementById('diskText');
+  
+  cpuFill.style.width = stats.current_cpu_usage + '%';
+  memoryFill.style.width = stats.current_memory_usage + '%';
+  diskFill.style.width = stats.current_disk_usage + '%';
+  
+  cpuText.textContent = stats.current_cpu_usage + '%';
+  memoryText.textContent = stats.current_memory_usage + '%';
+  diskText.textContent = stats.current_disk_usage + '%';
+}
+
+function refreshData() {
+  loadAnalyticsData();
+}
+
+function toggleExportMenu() {
+  const menu = document.getElementById('exportMenu');
+  menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+}
+
+function exportData(type) {
+  document.getElementById('exportMenu').style.display = 'none';
+  
+  fetch(`/analytics/export?type=${type}`)
+    .then(response => response.json())
+    .then(data => {
+      if (data.status === 'success') {
+        // Create downloadable JSON file
+        const blob = new Blob([JSON.stringify(data.data, null, 2)], { type: 'application/json' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = `friday_analytics_${type}_${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else {
+        alert('Export failed: ' + data.message);
+      }
+    })
+    .catch(error => {
+      console.error('Export error:', error);
+      alert('Export failed');
+    });
+}
+
+// Close export menu when clicking outside
+document.addEventListener('click', function(event) {
+  const dropdown = document.querySelector('.export-dropdown');
+  if (!dropdown.contains(event.target)) {
+    document.getElementById('exportMenu').style.display = 'none';
+  }
+});
+
+// Load data when page loads
+document.addEventListener('DOMContentLoaded', function() {
+  loadAnalyticsData();
+  
+  // Auto-refresh every 30 seconds
+  setInterval(loadAnalyticsData, 30000);
+});
+</script>
+{% endblock %}

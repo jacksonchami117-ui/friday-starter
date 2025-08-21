@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Application Logs</title>
+  <style>
+    body { 
+      font-family: Arial, sans-serif; 
+      padding: 20px; 
+      background: #f9f9f9; 
+    }
+    .log-container { 
+      background: #000; 
+      color: #00ff00; 
+      padding: 15px; 
+      border-radius: 8px; 
+      font-family: 'Courier New', monospace; 
+      font-size: 12px;
+      max-height: 600px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      border: 1px solid #333;
+    }
+    .btn { 
+      padding: 6px 10px; 
+      border: 1px solid #333; 
+      background: #111827; 
+      color: #fff; 
+      text-decoration: none; 
+      border-radius: 6px; 
+      margin-right: 8px;
+    }
+    .log-info {
+      background: #e6f3ff;
+      padding: 10px;
+      border-radius: 4px;
+      margin-bottom: 15px;
+      border-left: 4px solid #0066cc;
+    }
+  </style>
+</head>
+<body>
+  <h1>Application Logs</h1>
+  
+  <div class="log-info">
+    <p><strong>Log File:</strong> {{ log_path }}</p>
+    <p><strong>Showing:</strong> Last 200 lines (most recent at bottom)</p>
+  </div>
+
+  <div>
+    <a class="btn" href="{{ url_for('logs.logs_viewer') }}">🔄 Refresh</a>
+    <a class="btn" href="{{ url_for('index') }}">← Back to Dashboard</a>
+  </div>
+  
+  <br>
+  
+  <div class="log-container">{% for line in log_lines %}{{ line }}
+{% endfor %}</div>
+  
+  <br>
+  <div>
+    <a class="btn" href="{{ url_for('logs.logs_viewer') }}">🔄 Refresh</a>
+    <a class="btn" href="{{ url_for('index') }}">← Back to Dashboard</a>
+  </div>
+</body>
+</html>

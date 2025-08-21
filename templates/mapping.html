@@ -1,49 +1,54 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <title>Column Mapping</title>
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; }
-    label { display: inline-block; width: 120px; font-weight: bold; }
-    select { min-width: 220px; margin-bottom: 10px; }
-    .hint { color: #6b7280; font-size: 12px; margin-left: 8px; }
+    body { font-family: Arial, sans-serif; padding: 20px; background: #f9f9f9; }
+    h1 { margin-bottom: 15px; }
+    form { margin-top: 20px; }
+    table { border-collapse: collapse; margin-top: 15px; width: 100%; max-width: 600px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    th { background: #efefef; }
+    tr:nth-child(even) { background: #f2f2f2; }
+    select { width: 100%; padding: 5px; }
+    .btn { padding: 8px 12px; background: #111827; color: white; border: none; border-radius: 6px; cursor: pointer; }
+    .btn:hover { background: #2563eb; }
   </style>
 </head>
 <body>
-  <h1>Column Mapping</h1>
+  <h1>🗺️ Column Mapping</h1>
 
-  {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-      <ul>
-        {% for category, message in messages %}
-          <li><strong>{{ category|upper }}:</strong> {{ message }}</li>
+  <p>Match your CSV headers to the system fields. This ensures we know which column is First Name, Email, etc.</p>
+
+  <form method="POST">
+    <table>
+      <thead>
+        <tr><th>System Field</th><th>CSV Column</th></tr>
+      </thead>
+      <tbody>
+        {% for field in system_fields %}
+        <tr>
+          <td><strong>{{ field }}</strong></td>
+          <td>
+            <select name="{{ field }}">
+              <option value="">-- No Mapping --</option>
+              {% for col in headers %}
+                <option value="{{ col }}"
+                  {% if existing.get(field) == col %}selected{% elif suggestions.get(field) == col %}selected{% endif %}>
+                  {{ col }}
+                </option>
+              {% endfor %}
+            </select>
+          </td>
+        </tr>
         {% endfor %}
-      </ul>
-    {% endif %}
-  {% endwith %}
-
-  <form method="post">
-    {% for field in system_fields %}
-      <div>
-        <label for="{{ field }}">{{ field }}</label>
-        <select id="{{ field }}" name="{{ field }}">
-          <option value="">-- (not mapped) --</option>
-          {% for h in headers %}
-            {% set sel = '' %}
-            {% if existing.get(field) == h or suggestions.get(field) == h %}
-              {% set sel = 'selected' %}
-            {% endif %}
-            <option value="{{ h }}" {{ sel }}>{{ h }}</option>
-          {% endfor %}
-        </select>
-        <span class="hint">CSV → {{ field }}</span>
-      </div>
-    {% endfor %}
-    <button type="submit">Save Mapping</button>
+      </tbody>
+    </table>
+    <br>
+    <button type="submit" class="btn">💾 Save Mapping</button>
   </form>
 
-  <br><a href="{{ url_for('leads.list_leads') }}">← Back to Leads</a>
+  <br><a href="{{ url_for('leads.list_leads') }}">← Back to Accepted Leads</a>
 </body>
 </html>

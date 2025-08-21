@@ -1,0 +1,50 @@
+name: Smoke Test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+      - name: Run smoke test
+        run: |
+          python scripts/smoke_test.py
+      - name: Upload zipped logs and traces
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: logs
+          path: state/logs/logs.zip
+      - name: Upload zipped test data
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-data
+          path: state/test-data.zip
+      - name: Upload zipped failed HTTP responses
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: http-failures
+          path: state/logs/http_failures/*.zip
+      - name: Upload test data summary
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-data-summary
+          path: state/summary.txt

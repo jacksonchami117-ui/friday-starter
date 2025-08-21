@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: friday-starter
+    env: python
+    buildCommand: |
+      apt-get update -y && apt-get install -y ffmpeg && pip install -r requirements.txt
+    startCommand: gunicorn app:app -w 2 -k gthread --threads 4 --timeout 240
+    envVars:
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: STATE_DIR
+        value: "/data/state"
+      - key: USE_DB
+        value: "1"
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: API_KEY
+        sync: false
+    disk:
+      name: state
+      mountPath: /data
+      sizeGB: 5

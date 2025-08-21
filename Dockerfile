@@ -9,17 +9,21 @@ WORKDIR /app
 # Ensure Python can find src package
 ENV PYTHONPATH=/app:/app/src
 
-# Install system dependencies
-RUN apt-get update &&     apt-get install -y --no-install-recommends build-essential &&     rm -rf /var/lib/apt/lists/*
+RUN apt-get update -y && apt-get install -y --no-install-recommends \
+	ffmpeg \
+	fonts-dejavu-core \
+	&& rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
 COPY requirements.txt .
-RUN pip install --upgrade pip &&     pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the rest of the app
 COPY . .
 
 ENV PORT=8000
-EXPOSE 8000
+ENV STATE_DIR=/data/state
+VOLUME ["/data"]
+EXPOSE 10000
 
-CMD ["sh", "-c", "gunicorn app:app --bind 0.0.0.0:${PORT}"]
+CMD ["gunicorn", "app:app", "-w", "2", "-k", "gthread", "--threads", "4", "--timeout", "240", "-b", "0.0.0.0:10000"]

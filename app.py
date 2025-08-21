@@ -11,6 +11,7 @@ from src.exports import exports_bp
 from src.diagnostics_routes import diagnostics_bp
 from src.editor import editor_bp
 from src.notify import notify_bp
+from src.admin import admin_bp
 
 def create_app():
     app = Flask(__name__)
@@ -51,6 +52,7 @@ def create_app():
     app.register_blueprint(diagnostics_bp)
     app.register_blueprint(editor_bp)
     app.register_blueprint(notify_bp)
+    app.register_blueprint(admin_bp)
 
     # Safety: global error handler
     @app.errorhandler(Exception)

@@ -1,0 +1,244 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="admin-header">
+  <h1>Job Monitor</h1>
+  <nav class="admin-nav">
+    <a href="{{ url_for('admin.admin_dashboard') }}" class="btn secondary">Dashboard</a>
+    <a href="{{ url_for('admin.admin_users') }}" class="btn secondary">Users</a>
+    <a href="{{ url_for('admin.admin_jobs') }}" class="btn secondary active">Jobs</a>
+    <a href="{{ url_for('admin.admin_leads') }}" class="btn secondary">Leads</a>
+  </nav>
+</div>
+
+<div class="card">
+  <div class="table-header">
+    <h3>All Jobs ({{ jobs|length }})</h3>
+    <button class="btn primary" onclick="refreshJobs()">Refresh</button>
+  </div>
+  
+  <div class="table-container">
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Type</th>
+          <th>Status</th>
+          <th>Progress</th>
+          <th>Created</th>
+          <th>Lead Count</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for job in jobs %}
+        <tr>
+          <td>{{ job.id }}</td>
+          <td>{{ job.type.replace('_', ' ').title() }}</td>
+          <td>
+            <span class="status-badge status-{{ job.status }}">
+              {{ job.status.title() }}
+            </span>
+          </td>
+          <td>
+            <div class="progress-container">
+              <div class="progress-bar">
+                <div class="progress-fill" style="width: {{ job.progress }}%"></div>
+              </div>
+              <span class="progress-text">{{ job.progress }}%</span>
+            </div>
+          </td>
+          <td>{{ job.created }}</td>
+          <td>{{ job.lead_count if job.lead_count > 0 else '-' }}</td>
+          <td>
+            <div class="action-buttons">
+              {% if job.status == 'running' or job.status == 'queued' %}
+                <button class="btn-small warning" onclick="cancelJob({{ job.id }})">Cancel</button>
+              {% endif %}
+              {% if job.status == 'failed' %}
+                <button class="btn-small success" onclick="restartJob({{ job.id }})">Restart</button>
+              {% endif %}
+              <button class="btn-small secondary" onclick="viewJobDetails({{ job.id }})">Details</button>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<style>
+.admin-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.admin-nav {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.admin-nav .btn.active {
+  background: var(--primary-color);
+  color: white;
+}
+
+.table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.table-container {
+  overflow-x: auto;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+}
+
+.admin-table th,
+.admin-table td {
+  padding: 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.admin-table th {
+  background-color: #f8f9fa;
+  font-weight: 600;
+}
+
+.admin-table tr:hover {
+  background-color: #f8f9fa;
+}
+
+.status-badge {
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.status-running { background: #fff3cd; color: #856404; }
+.status-completed { background: #d4edda; color: #155724; }
+.status-failed { background: #f8d7da; color: #721c24; }
+.status-queued { background: #d1ecf1; color: #0c5460; }
+.status-cancelled { background: #e2e3e5; color: #383d41; }
+
+.progress-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 100px;
+}
+
+.progress-bar {
+  flex: 1;
+  height: 0.5rem;
+  background: #e9ecef;
+  border-radius: 0.25rem;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: #007bff;
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  font-size: 0.75rem;
+  color: #6c757d;
+  min-width: 35px;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.btn-small {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  border: 1px solid #dee2e6;
+  border-radius: 0.25rem;
+  background: white;
+  cursor: pointer;
+}
+
+.btn-small.secondary { border-color: #6c757d; color: #6c757d; }
+.btn-small.warning { border-color: #ffc107; color: #ffc107; }
+.btn-small.success { border-color: #28a745; color: #28a745; }
+
+.btn-small:hover {
+  background: #f8f9fa;
+}
+</style>
+
+<script>
+function refreshJobs() {
+  location.reload();
+}
+
+function cancelJob(jobId) {
+  if (!confirm('Are you sure you want to cancel this job?')) {
+    return;
+  }
+  
+  fetch(`/admin/jobs/${jobId}/cancel`, { 
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.status === 'success') {
+      location.reload();
+    } else {
+      alert('Error: ' + data.message);
+    }
+  })
+  .catch(error => {
+    console.error('Error cancelling job:', error);
+    alert('Error cancelling job');
+  });
+}
+
+function restartJob(jobId) {
+  if (!confirm('Are you sure you want to restart this job?')) {
+    return;
+  }
+  
+  fetch(`/admin/jobs/${jobId}/restart`, { 
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.status === 'success') {
+      location.reload();
+    } else {
+      alert('Error: ' + data.message);
+    }
+  })
+  .catch(error => {
+    console.error('Error restarting job:', error);
+    alert('Error restarting job');
+  });
+}
+
+function viewJobDetails(jobId) {
+  alert('Job details functionality would be implemented here for job ' + jobId);
+}
+</script>
+{% endblock %}

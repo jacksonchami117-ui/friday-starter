@@ -1,32 +1,14 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>FRIDAY is online</h1>
-{% if pending_decisions and pending_decisions > 0 %}
-  <div class="banner warning">You have {{ pending_decisions }} pending decision(s). <a href="/decisions">Review →</a></div>
-{% else %}
-  <div class="banner success">All systems green.</div>
-{% endif %}
-
-<div class="grid">
-  <div class="card">
-    <h2>Projects</h2>
-    <p>{{ projects|length }} projects</p>
-    <a class="cta" href="/projects">Open →</a>
-  </div>
-  <div class="card">
-    <h2>SOPs</h2>
-    <p>{{ sops|length }} SOPs</p>
-    <a class="cta" href="/sops">Open →</a>
-  </div>
-  <div class="card">
-    <h2>Decisions</h2>
-    <p>{{ decisions|length }} decisions</p>
-    <a class="cta" href="/decisions">Open →</a>
-  </div>
-  <div class="card">
-    <h2>Runs</h2>
-    <p>{{ runs|length }} runs</p>
-    <a class="cta" href="/runs">Open →</a>
-  </div>
+<div class="dashboard">
+  <h2>Dashboard</h2>
+  <form method="POST" action="/toggle_notify" style="margin-bottom:2em;">
+    <label>
+      <input type="checkbox" name="notifications_enabled" value="1"
+        {% if session.get('notifications_enabled') %}checked{% endif %}> Enable Notifications
+    </label>
+    <button type="submit">Save</button>
+  </form>
+  <!-- Existing dashboard content here -->
 </div>
 {% endblock %}

@@ -11,11 +11,20 @@ from src.exports import exports_bp
 from src.diagnostics_routes import diagnostics_bp
 from src.editor import editor_bp
 
+# Friday-render-pack imports
+from src.auth import auth_bp
+from src.render import render_bp as render_new_bp
+from src.metrics import metrics_bp
+from src.config import get_config
+
 def create_app():
     app = Flask(__name__)
-    app.secret_key = os.getenv("SECRET_KEY", "dev-secret-key")
-    app.config["TEMPLATES_AUTO_RELOAD"] = True
-
+    
+    # Load configuration
+    config = get_config()
+    app.config.from_object(config)
+    
+    # Maintain compatibility with existing DATA_DIR config
     base_dir = os.path.dirname(os.path.abspath(__file__))
     data_dir = os.getenv("DATA_DIR", os.path.join(base_dir, "state"))
     app.config["DATA_DIR"] = data_dir
@@ -43,9 +52,14 @@ def create_app():
     app.logger.info("=== FRIDAY System Startup ===")
 
     # Register blueprints
+    app.register_blueprint(auth_bp)  # Authentication system
+    app.register_blueprint(render_new_bp)  # New render system
+    app.register_blueprint(metrics_bp)  # Metrics system
+    
+    # Legacy blueprints
     app.register_blueprint(leads_bp)
     app.register_blueprint(orders_bp)
-    app.register_blueprint(render_bp)
+    app.register_blueprint(render_bp, url_prefix='/legacy_render')  # Move old render to legacy
     app.register_blueprint(exports_bp)
     app.register_blueprint(diagnostics_bp)
     app.register_blueprint(editor_bp)
@@ -85,6 +99,28 @@ def create_app():
         except Exception:
             current_app.logger.exception("index.html failed")
             return "Home failed to render (see logs).", 500
+    
+    @app.route("/dashboard")
+    def dashboard():
+        try:
+            # Provide empty data for legacy template compatibility
+            return render_template("dashboard.html", 
+                                 projects=[], 
+                                 sops=[], 
+                                 decisions=[], 
+                                 runs=[],
+                                 pending_decisions=0)
+        except Exception:
+            current_app.logger.exception("dashboard.html failed")
+            return "Dashboard failed to render (see logs).", 500
+
+    @app.route("/welcome")
+    def welcome():
+        try:
+            return render_template("welcome.html")
+        except Exception:
+            current_app.logger.exception("welcome.html failed")
+            return redirect(url_for("dashboard"))
 
     @app.route("/skip-intro")
     def skip_intro():

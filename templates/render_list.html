@@ -1,0 +1,362 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="render-container">
+    <div class="header">
+        <h1>🎬 Render Jobs</h1>
+        <p>Manage your video rendering jobs and monitor progress</p>
+        
+        <div class="actions">
+            <form method="POST" action="{{ url_for('render.start_render') }}" style="display: inline;">
+                <button type="submit" class="btn btn-primary">
+                    🚀 Start New Render Job
+                </button>
+            </form>
+            <a href="{{ url_for('render.api_jobs_list') }}" class="btn btn-secondary" target="_blank">
+                📊 API View
+            </a>
+        </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="messages">
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <div class="jobs-section">
+        {% if jobs %}
+            <div class="jobs-grid">
+                {% for job in jobs %}
+                <div class="job-card job-{{ job.status }}">
+                    <div class="job-header">
+                        <h3>Job {{ job.id[:8] }}...</h3>
+                        <span class="status-badge status-{{ job.status }}">{{ job.status.upper() }}</span>
+                    </div>
+                    
+                    <div class="job-details">
+                        <div class="detail-row">
+                            <span class="detail-label">Type:</span>
+                            <span class="detail-value">{{ job.get('type', 'unknown') }}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Created:</span>
+                            <span class="detail-value">{{ job.created_at[:19] if job.created_at else 'N/A' }}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Updated:</span>
+                            <span class="detail-value">{{ job.updated_at[:19] if job.updated_at else 'N/A' }}</span>
+                        </div>
+                        {% if job.get('progress') is not none %}
+                        <div class="detail-row">
+                            <span class="detail-label">Progress:</span>
+                            <div class="progress-container">
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: {{ job.progress }}%"></div>
+                                </div>
+                                <span class="progress-text">{{ job.progress }}%</span>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% if job.get('message') %}
+                        <div class="detail-row">
+                            <span class="detail-label">Message:</span>
+                            <span class="detail-value">{{ job.message }}</span>
+                        </div>
+                        {% endif %}
+                        {% if job.get('output_files') %}
+                        <div class="detail-row">
+                            <span class="detail-label">Output Files:</span>
+                            <span class="detail-value">{{ job.output_files|length }} files</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="job-actions">
+                        <a href="{{ url_for('render.render_status', job_id=job.id) }}" class="btn btn-small btn-primary">
+                            View Details
+                        </a>
+                        {% if job.status in ['processing', 'queued'] %}
+                        <button class="btn btn-small btn-secondary" onclick="refreshJob('{{ job.id }}')">
+                            🔄 Refresh
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <div class="empty-icon">📋</div>
+                <h3>No render jobs yet</h3>
+                <p>Start your first render job to see it appear here.</p>
+                <form method="POST" action="{{ url_for('render.start_render') }}">
+                    <button type="submit" class="btn btn-primary">
+                        🚀 Start First Render Job
+                    </button>
+                </form>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.render-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.header {
+    margin-bottom: 2rem;
+}
+
+.header h1 {
+    color: var(--primary-color, #2563eb);
+    margin-bottom: 0.5rem;
+}
+
+.header p {
+    color: var(--text-secondary, #6b7280);
+    margin-bottom: 1rem;
+}
+
+.actions {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: 500;
+    cursor: pointer;
+    display: inline-block;
+    transition: all 0.2s;
+}
+
+.btn-small {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+}
+
+.btn-primary {
+    background-color: var(--primary-color, #2563eb);
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: var(--primary-hover, #1d4ed8);
+}
+
+.btn-secondary {
+    background-color: var(--secondary-color, #6b7280);
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: var(--secondary-hover, #4b5563);
+}
+
+.messages {
+    margin-bottom: 2rem;
+}
+
+.alert {
+    padding: 1rem;
+    border-radius: 6px;
+    margin-bottom: 1rem;
+}
+
+.alert-success {
+    background-color: #d1fae5;
+    border: 1px solid #10b981;
+    color: #065f46;
+}
+
+.alert-error {
+    background-color: #fee2e2;
+    border: 1px solid #ef4444;
+    color: #991b1b;
+}
+
+.jobs-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+    gap: 1.5rem;
+}
+
+.job-card {
+    background: white;
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 8px;
+    padding: 1.5rem;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.job-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.job-card.job-queued {
+    border-left: 4px solid #f59e0b;
+}
+
+.job-card.job-processing {
+    border-left: 4px solid #3b82f6;
+}
+
+.job-card.job-done {
+    border-left: 4px solid #10b981;
+}
+
+.job-card.job-failed {
+    border-left: 4px solid #ef4444;
+}
+
+.job-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.job-header h3 {
+    margin: 0;
+    color: var(--primary-color, #2563eb);
+}
+
+.status-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 1rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.status-queued {
+    background-color: #fef3c7;
+    color: #92400e;
+}
+
+.status-processing {
+    background-color: #dbeafe;
+    color: #1e40af;
+}
+
+.status-done {
+    background-color: #d1fae5;
+    color: #065f46;
+}
+
+.status-failed {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+
+.job-details {
+    margin-bottom: 1.5rem;
+}
+
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.detail-label {
+    font-weight: 500;
+    color: var(--text-secondary, #6b7280);
+}
+
+.detail-value {
+    color: var(--text-primary, #111827);
+}
+
+.progress-container {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1;
+    margin-left: 1rem;
+}
+
+.progress-bar {
+    flex: 1;
+    height: 6px;
+    background-color: #e5e7eb;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background-color: #3b82f6;
+    transition: width 0.3s;
+}
+
+.progress-text {
+    font-size: 0.75rem;
+    color: var(--text-secondary, #6b7280);
+    min-width: 3rem;
+    text-align: right;
+}
+
+.job-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+}
+
+.empty-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+.empty-state h3 {
+    color: var(--text-primary, #111827);
+    margin-bottom: 0.5rem;
+}
+
+.empty-state p {
+    color: var(--text-secondary, #6b7280);
+    margin-bottom: 2rem;
+}
+</style>
+
+<script>
+function refreshJob(jobId) {
+    // Refresh job status via API
+    fetch(`{{ url_for('render.api_job_status', job_id='JOBID') }}`.replace('JOBID', jobId))
+        .then(response => response.json())
+        .then(data => {
+            // Reload page to show updated status
+            window.location.reload();
+        })
+        .catch(error => {
+            console.error('Error refreshing job:', error);
+        });
+}
+
+// Auto-refresh every 10 seconds for active jobs
+const hasActiveJobs = document.querySelector('.job-processing, .job-queued');
+if (hasActiveJobs) {
+    setInterval(() => {
+        window.location.reload();
+    }, 10000);
+}
+</script>
+{% endblock %}

@@ -1,1 +1,45 @@
+# Logs and runtime data
 state/logs/*.log
+state/logs/
+*.log
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Uploads and data
+state/uploads/*
+!state/uploads/.gitkeep
+state/outputs/
+state/batches/
+state/assets/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Virtual environments
+venv/
+env/
+.env
+
+# Environment variables
+.env
+.env.*
+
+# Node modules (if any)
+node_modules/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db

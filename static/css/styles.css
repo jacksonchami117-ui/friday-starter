@@ -48,6 +48,7 @@ h1 { margin: 0 0 16px; }
 }
 .banner.warning { color: #ffd479; border-color: #4e3f20; background: #2a2217cc; }
 .banner.success { color: var(--success); border-color: #1f3e32; background: #13221bcc; }
+.banner.error { color: #ff6b6b; border-color: #4e2020; background: #2a1717cc; }
 .cta { color: var(--accent); text-decoration: none; }
 .cta:hover { text-decoration: underline; }
 .list .list-item { padding: 14px; border-bottom: 1px dashed #2a2e3d; }

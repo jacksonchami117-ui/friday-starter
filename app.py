@@ -10,6 +10,9 @@ from src.render_routes import render_bp
 from src.exports import exports_bp
 from src.diagnostics_routes import diagnostics_bp
 from src.editor import editor_bp
+from src.notify import notify_bp
+from src.admin import admin_bp
+from src.analytics import analytics_bp
 
 def create_app():
     app = Flask(__name__)
@@ -49,6 +52,9 @@ def create_app():
     app.register_blueprint(exports_bp)
     app.register_blueprint(diagnostics_bp)
     app.register_blueprint(editor_bp)
+    app.register_blueprint(notify_bp)
+    app.register_blueprint(admin_bp)
+    app.register_blueprint(analytics_bp)
 
     # Safety: global error handler
     @app.errorhandler(Exception)
@@ -85,6 +91,22 @@ def create_app():
         except Exception:
             current_app.logger.exception("index.html failed")
             return "Home failed to render (see logs).", 500
+
+    @app.route("/dashboard")
+    def dashboard():
+        try:
+            # Mock data for dashboard - would be replaced with real data
+            context = {
+                'pending_decisions': 0,
+                'projects': [],
+                'sops': [],
+                'decisions': [],
+                'runs': []
+            }
+            return render_template("dashboard.html", **context)
+        except Exception:
+            current_app.logger.exception("dashboard.html failed")
+            return "Dashboard failed to render (see logs).", 500
 
     @app.route("/skip-intro")
     def skip_intro():

@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="admin-header">
+  <h1>Admin Dashboard</h1>
+  <nav class="admin-nav">
+    <a href="{{ url_for('admin.admin_dashboard') }}" class="btn secondary active">Dashboard</a>
+    <a href="{{ url_for('admin.admin_users') }}" class="btn secondary">Users</a>
+    <a href="{{ url_for('admin.admin_jobs') }}" class="btn secondary">Jobs</a>
+    <a href="{{ url_for('admin.admin_leads') }}" class="btn secondary">Leads</a>
+  </nav>
+</div>
+
+<div class="grid">
+  <div class="card">
+    <h3>Users</h3>
+    <div class="stat-row">
+      <span class="stat-number">{{ stats.total_users }}</span>
+      <span class="stat-label">Total Users</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-number success">{{ stats.active_users }}</span>
+      <span class="stat-label">Active</span>
+    </div>
+    <a href="{{ url_for('admin.admin_users') }}" class="cta">Manage Users →</a>
+  </div>
+
+  <div class="card">
+    <h3>Jobs</h3>
+    <div class="stat-row">
+      <span class="stat-number">{{ stats.total_jobs }}</span>
+      <span class="stat-label">Total Jobs</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-number warning">{{ stats.running_jobs }}</span>
+      <span class="stat-label">Running</span>
+    </div>
+    {% if stats.failed_jobs > 0 %}
+    <div class="stat-row">
+      <span class="stat-number danger">{{ stats.failed_jobs }}</span>
+      <span class="stat-label">Failed</span>
+    </div>
+    {% endif %}
+    <a href="{{ url_for('admin.admin_jobs') }}" class="cta">Monitor Jobs →</a>
+  </div>
+
+  <div class="card">
+    <h3>Leads</h3>
+    <div class="stat-row">
+      <span class="stat-number">{{ lead_stats.accepted + lead_stats.rejected }}</span>
+      <span class="stat-label">Total Leads</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-number success">{{ lead_stats.accepted }}</span>
+      <span class="stat-label">Accepted</span>
+    </div>
+    {% if lead_stats.rejected > 0 %}
+    <div class="stat-row">
+      <span class="stat-number warning">{{ lead_stats.rejected }}</span>
+      <span class="stat-label">Rejected</span>
+    </div>
+    {% endif %}
+    <a href="{{ url_for('admin.admin_leads') }}" class="cta">Manage Leads →</a>
+  </div>
+
+  <div class="card">
+    <h3>System</h3>
+    <div class="stat-row">
+      <span class="stat-number success">Online</span>
+      <span class="stat-label">Status</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-number">{{ moment().format('HH:mm') }}</span>
+      <span class="stat-label">Current Time</span>
+    </div>
+    <a href="{{ url_for('diagnostics.diagnostics_home') }}" class="cta">Diagnostics →</a>
+  </div>
+</div>
+
+<style>
+.admin-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.admin-nav {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.admin-nav .btn.active {
+  background: var(--primary-color);
+  color: white;
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 0.5rem 0;
+}
+
+.stat-number {
+  font-size: 1.2em;
+  font-weight: bold;
+}
+
+.stat-number.success { color: #28a745; }
+.stat-number.warning { color: #ffc107; }
+.stat-number.danger { color: #dc3545; }
+
+.stat-label {
+  color: #666;
+  font-size: 0.9em;
+}
+</style>
+{% endblock %}

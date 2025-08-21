@@ -6,6 +6,7 @@ import json
 import pandas as pd
 from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
 from werkzeug.utils import secure_filename
+from src.db import get_db_manager
 
 leads_bp = Blueprint("leads", __name__, url_prefix="/leads")
 
@@ -122,29 +123,35 @@ def upload_leads():
 
 @leads_bp.route("/list", methods=["GET"])
 def list_leads():
-    paths = _paths()
-    if not os.path.exists(paths["accepted"]):
-        flash("No leads uploaded yet.", "warning")
+    try:
+        db = get_db_manager()
+        leads = db.get_leads(status='accepted')
+        
+        if not leads:
+            flash("No leads uploaded yet.", "warning")
+            return redirect(url_for("leads.leads_home"))
+        
+        return render_template("leads_list.html", leads=leads)
+    except Exception as e:
+        current_app.logger.exception("Error listing leads")
+        flash(f"Error loading leads: {str(e)}", "danger")
         return redirect(url_for("leads.leads_home"))
-
-    with open(paths["accepted"], newline="", encoding="utf-8") as f_in:
-        reader = csv.DictReader(f_in)
-        leads = list(reader)
-
-    return render_template("leads_list.html", leads=leads)
 
 @leads_bp.route("/rejected", methods=["GET"])
 def list_rejected():
-    paths = _paths()
-    if not os.path.exists(paths["rejected"]):
-        flash("No rejected leads to show.", "info")
+    try:
+        db = get_db_manager()
+        rejected_leads = db.get_leads(status='rejected')
+        
+        if not rejected_leads:
+            flash("No rejected leads to show.", "info")
+            return redirect(url_for("leads.leads_home"))
+        
+        return render_template("leads_rejected.html", rows=rejected_leads)
+    except Exception as e:
+        current_app.logger.exception("Error listing rejected leads")
+        flash(f"Error loading rejected leads: {str(e)}", "danger")
         return redirect(url_for("leads.leads_home"))
-
-    with open(paths["rejected"], newline="", encoding="utf-8") as f_in:
-        reader = csv.DictReader(f_in)
-        rows = list(reader)
-
-    return render_template("leads_rejected.html", rows=rows)
 
 # --- Column Mapping ---
 SYSTEM_FIELDS = ["first_name", "email", "phone", "website"]
@@ -218,3 +225,14 @@ def mapping():
         suggestions=suggestions,
         existing=existing
     )
+
+@leads_bp.route("/db-status", methods=["GET"])
+def database_status():
+    """Show database status for debugging"""
+    try:
+        db = get_db_manager()
+        status = db.get_status()
+        return render_template("db_status.html", status=status)
+    except Exception as e:
+        current_app.logger.exception("Error getting database status")
+        return f"Database status error: {str(e)}", 500

@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+ENV/
+
+# Flask
+instance/
+.webassets-cache
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# State directory contents (keep structure but not data)
+state/logs/*.log
+state/outputs/videos/*.mp4
+state/render_jobs.json
+state/*.db
+state/uploads/*.csv
+state/uploads/*.xlsx
+
+# Temporary files
+/tmp/
+*.tmp
+
+# Node modules
+node_modules/
+
+# Environment files
+.env.local
+.env.production

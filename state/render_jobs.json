@@ -1,0 +1,90 @@
+{
+  "97e5a7f4-c7d0-4503-8c13-48cf6a3039ef": {
+    "id": "97e5a7f4-c7d0-4503-8c13-48cf6a3039ef",
+    "status": "done",
+    "created_at": "2025-08-21T08:50:03.296711",
+    "updated_at": "2025-08-21T08:50:05.800550",
+    "progress": 100,
+    "message": "Successfully rendered 5 videos",
+    "type": "video_render",
+    "leads_file": "/home/runner/work/friday-starter/friday-starter/state/uploads/accepted_leads.csv",
+    "requested_by": "test",
+    "output_files": [
+      {
+        "filename": "video_john_1755766203_1.mp4",
+        "path": "/home/runner/work/friday-starter/friday-starter/state/outputs/videos/video_john_1755766203_1.mp4",
+        "lead_name": "John",
+        "size": 134
+      },
+      {
+        "filename": "video_jane_1755766204_2.mp4",
+        "path": "/home/runner/work/friday-starter/friday-starter/state/outputs/videos/video_jane_1755766204_2.mp4",
+        "lead_name": "Jane",
+        "size": 134
+      },
+      {
+        "filename": "video_bob_1755766204_3.mp4",
+        "path": "/home/runner/work/friday-starter/friday-starter/state/outputs/videos/video_bob_1755766204_3.mp4",
+        "lead_name": "Bob",
+        "size": 131
+      },
+      {
+        "filename": "video_alice_1755766205_4.mp4",
+        "path": "/home/runner/work/friday-starter/friday-starter/state/outputs/videos/video_alice_1755766205_4.mp4",
+        "lead_name": "Alice",
+        "size": 137
+      },
+      {
+        "filename": "video_charlie_1755766205_5.mp4",
+        "path": "/home/runner/work/friday-starter/friday-starter/state/outputs/videos/video_charlie_1755766205_5.mp4",
+        "lead_name": "Charlie",
+        "size": 143
+      }
+    ],
+    "completed_at": "2025-08-21T08:50:05.800542"
+  },
+  "c72749ac-4dbd-41be-89b1-3609e7620ebf": {
+    "id": "c72749ac-4dbd-41be-89b1-3609e7620ebf",
+    "status": "done",
+    "created_at": "2025-08-21T08:50:25.569557",
+    "updated_at": "2025-08-21T08:50:28.073453",
+    "progress": 100,
+    "message": "Successfully rendered 5 videos",
+    "type": "video_render",
+    "leads_file": "/home/runner/work/friday-starter/friday-starter/state/uploads/accepted_leads.csv",
+    "requested_by": "test",
+    "output_files": [
+      {
+        "filename": "video_john_1755766226_1.mp4",
+        "path": "/home/runner/work/friday-starter/friday-starter/state/outputs/videos/video_john_1755766226_1.mp4",
+        "lead_name": "John",
+        "size": 134
+      },
+      {
+        "filename": "video_jane_1755766226_2.mp4",
+        "path": "/home/runner/work/friday-starter/friday-starter/state/outputs/videos/video_jane_1755766226_2.mp4",
+        "lead_name": "Jane",
+        "size": 134
+      },
+      {
+        "filename": "video_bob_1755766227_3.mp4",
+        "path": "/home/runner/work/friday-starter/friday-starter/state/outputs/videos/video_bob_1755766227_3.mp4",
+        "lead_name": "Bob",
+        "size": 131
+      },
+      {
+        "filename": "video_alice_1755766227_4.mp4",
+        "path": "/home/runner/work/friday-starter/friday-starter/state/outputs/videos/video_alice_1755766227_4.mp4",
+        "lead_name": "Alice",
+        "size": 137
+      },
+      {
+        "filename": "video_charlie_1755766228_5.mp4",
+        "path": "/home/runner/work/friday-starter/friday-starter/state/outputs/videos/video_charlie_1755766228_5.mp4",
+        "lead_name": "Charlie",
+        "size": 143
+      }
+    ],
+    "completed_at": "2025-08-21T08:50:28.073447"
+  }
+}

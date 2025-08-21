@@ -90,94 +90,95 @@ def get_job_store():
         job_store = JobStore(data_dir)
     return job_store
 
-def process_render_job(job_id):
-    """Process a render job in background."""
-    store = get_job_store()
-    job = store.get_job(job_id)
-    
-    if not job:
-        return
-    
-    try:
-        # Update status to processing
-        store.update_job(job_id, {
-            'status': 'processing',
-            'message': 'Processing render job...',
-            'progress': 10
-        })
+def process_render_job(job_id, app):
+    """Process a render job in background with application context."""
+    with app.app_context():
+        store = get_job_store()
+        job = store.get_job(job_id)
         
-        # Simulate processing time and create output files
-        data_dir = current_app.config.get('DATA_DIR', 'state')
-        outputs_dir = os.path.join(data_dir, 'outputs', 'videos')
-        os.makedirs(outputs_dir, exist_ok=True)
-        
-        # Read leads data
-        leads_file = os.path.join(data_dir, 'uploads', 'accepted_leads.csv')
-        if not os.path.exists(leads_file):
-            store.update_job(job_id, {
-                'status': 'failed',
-                'message': 'No leads file found',
-                'progress': 0
-            })
+        if not job:
             return
         
-        # Process leads and create video files
-        with open(leads_file, 'r', newline='', encoding='utf-8') as f:
-            reader = csv.DictReader(f)
-            leads = list(reader)
-        
-        total_leads = len(leads)
-        processed = 0
-        output_files = []
-        
-        for i, lead in enumerate(leads):
-            # Simulate processing time
-            time.sleep(0.5)  # Quick for demo
-            
-            # Create dummy video file
-            first_name = lead.get('first_name', lead.get('First Name', f'lead_{i+1}'))
-            video_filename = f"video_{first_name.lower()}_{int(time.time())}_{i+1}.mp4"
-            video_path = os.path.join(outputs_dir, video_filename)
-            
-            # Create a dummy video file (in real scenario this would be FFmpeg)
-            with open(video_path, 'w') as f:
-                f.write(f"# Dummy video file for {first_name}\n")
-                f.write(f"# Created at: {datetime.now()}\n")
-                f.write(f"# Lead data: {json.dumps(lead)}\n")
-            
-            output_files.append({
-                'filename': video_filename,
-                'path': video_path,
-                'lead_name': first_name,
-                'size': os.path.getsize(video_path)
-            })
-            
-            processed += 1
-            progress = int((processed / total_leads) * 80) + 10  # 10-90%
-            
+        try:
+            # Update status to processing
             store.update_job(job_id, {
-                'progress': progress,
-                'message': f'Processed {processed}/{total_leads} leads...'
+                'status': 'processing',
+                'message': 'Processing render job...',
+                'progress': 10
             })
-        
-        # Final completion
-        store.update_job(job_id, {
-            'status': 'done',
-            'progress': 100,
-            'message': f'Successfully rendered {processed} videos',
-            'output_files': output_files,
-            'completed_at': datetime.now().isoformat()
-        })
-        
-        current_app.logger.info(f"Render job {job_id} completed successfully")
-        
-    except Exception as e:
-        current_app.logger.error(f"Render job {job_id} failed: {e}")
-        store.update_job(job_id, {
-            'status': 'failed',
-            'message': f'Job failed: {str(e)}',
-            'progress': 0
-        })
+            
+            # Simulate processing time and create output files
+            data_dir = current_app.config.get('DATA_DIR', 'state')
+            outputs_dir = os.path.join(data_dir, 'outputs', 'videos')
+            os.makedirs(outputs_dir, exist_ok=True)
+            
+            # Read leads data
+            leads_file = os.path.join(data_dir, 'uploads', 'accepted_leads.csv')
+            if not os.path.exists(leads_file):
+                store.update_job(job_id, {
+                    'status': 'failed',
+                    'message': 'No leads file found',
+                    'progress': 0
+                })
+                return
+            
+            # Process leads and create video files
+            with open(leads_file, 'r', newline='', encoding='utf-8') as f:
+                reader = csv.DictReader(f)
+                leads = list(reader)
+            
+            total_leads = len(leads)
+            processed = 0
+            output_files = []
+            
+            for i, lead in enumerate(leads):
+                # Simulate processing time
+                time.sleep(0.5)  # Quick for demo
+                
+                # Create dummy video file
+                first_name = lead.get('first_name', lead.get('First Name', f'lead_{i+1}'))
+                video_filename = f"video_{first_name.lower()}_{int(time.time())}_{i+1}.mp4"
+                video_path = os.path.join(outputs_dir, video_filename)
+                
+                # Create a dummy video file (in real scenario this would be FFmpeg)
+                with open(video_path, 'w') as f:
+                    f.write(f"# Dummy video file for {first_name}\n")
+                    f.write(f"# Created at: {datetime.now()}\n")
+                    f.write(f"# Lead data: {json.dumps(lead)}\n")
+                
+                output_files.append({
+                    'filename': video_filename,
+                    'path': video_path,
+                    'lead_name': first_name,
+                    'size': os.path.getsize(video_path)
+                })
+                
+                processed += 1
+                progress = int((processed / total_leads) * 80) + 10  # 10-90%
+                
+                store.update_job(job_id, {
+                    'progress': progress,
+                    'message': f'Processed {processed}/{total_leads} leads...'
+                })
+            
+            # Final completion
+            store.update_job(job_id, {
+                'status': 'done',
+                'progress': 100,
+                'message': f'Successfully rendered {processed} videos',
+                'output_files': output_files,
+                'completed_at': datetime.now().isoformat()
+            })
+            
+            current_app.logger.info(f"Render job {job_id} completed successfully")
+            
+        except Exception as e:
+            current_app.logger.error(f"Render job {job_id} failed: {e}")
+            store.update_job(job_id, {
+                'status': 'failed',
+                'message': f'Job failed: {str(e)}',
+                'progress': 0
+            })
 
 @render_bp.route('/list')
 @login_required
@@ -211,7 +212,7 @@ def start_render():
         job_id = store.create_job(job_data)
         
         # Start background processing
-        thread = threading.Thread(target=process_render_job, args=(job_id,))
+        thread = threading.Thread(target=process_render_job, args=(job_id, current_app._get_current_object()))
         thread.daemon = True
         thread.start()
         

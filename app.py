@@ -6,7 +6,8 @@ from werkzeug.exceptions import HTTPException
 # Blueprints
 from src.leads import leads_bp
 from src.orders import orders_bp
-from src.render_routes import render_bp
+# Skip old render_routes to avoid conflicts with new render system
+# from src.render_routes import render_bp
 from src.exports import exports_bp
 from src.diagnostics_routes import diagnostics_bp
 from src.editor import editor_bp
@@ -59,7 +60,7 @@ def create_app():
     # Legacy blueprints
     app.register_blueprint(leads_bp)
     app.register_blueprint(orders_bp)
-    app.register_blueprint(render_bp, url_prefix='/legacy_render')  # Move old render to legacy
+    # Old render system replaced by new render system
     app.register_blueprint(exports_bp)
     app.register_blueprint(diagnostics_bp)
     app.register_blueprint(editor_bp)

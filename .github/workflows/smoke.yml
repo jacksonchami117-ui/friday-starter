@@ -1,50 +1,75 @@
-name: Smoke Test
+name: Smoke
 
 on:
+  workflow_dispatch:
   push:
-    branches:
-      - main
+    branches: [ "main" ]
   pull_request:
-    branches:
-      - main
+    branches: [ "main" ]
 
 jobs:
   smoke:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-      - name: Install dependencies
+          python-version: "3.11"
+
+      - name: Install ffmpeg
         run: |
+          sudo apt-get update -y
+          sudo apt-get install -y ffmpeg
+
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
           pip install -r requirements.txt
+
+      - name: Start app
+        env:
+          ADMIN_PASSWORD: ci-admin
+          FLASK_SECRET_KEY: testkey
+        run: |
+          nohup python app.py > server.log 2>&1 &
+          echo $! > server.pid
+
+      - name: Wait for health
+        run: |
+          for i in {1..30}; do
+            curl -fsS http://localhost:10000/healthz && exit 0
+            sleep 2
+          done
+          echo "App did not become healthy in time"
+          exit 1
+
       - name: Run smoke test
+        env:
+          BASE_URL: http://localhost:10000
+          ADMIN_PASSWORD: ci-admin
         run: |
           python scripts/smoke_test.py
-      - name: Upload zipped logs and traces
+
+      - name: Archive outputs
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
+        with:
+          name: rendered-videos
+          path: |
+            state/outputs/videos/**
+            state/outputs/thumbs/**
+          if-no-files-found: warn
+
+      - name: Archive logs
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
           name: logs
-          path: state/logs/logs.zip
-      - name: Upload zipped test data
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: test-data
-          path: state/test-data.zip
-      - name: Upload zipped failed HTTP responses
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: http-failures
-          path: state/logs/http_failures/*.zip
-      - name: Upload test data summary
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: test-data-summary
-          path: state/summary.txt
+          path: |
+            server.log
+            state/logs/**
+          if-no-files-found: warn

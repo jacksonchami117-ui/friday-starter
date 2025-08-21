@@ -32,6 +32,21 @@
     <form method="post" action="{{ url_for('exports.make_export_csv') }}">
       <button class="btn" type="submit">Create exports.csv</button>
     </form>
+    <br><br>
+    <h3>Date-stamped Exports</h3>
+    <form method="post" action="{{ url_for('exports.export_accepted_csv') }}">
+      <button class="btn" type="submit">Export Accepted CSV</button>
+    </form>
+    <form method="post" action="{{ url_for('exports.export_rejected_csv') }}">
+      <button class="btn" type="submit">Export Rejected CSV</button>
+    </form>
+    <form method="post" action="{{ url_for('exports.export_accepted_xlsx') }}">
+      <button class="btn" type="submit">Export Accepted XLSX</button>
+    </form>
+    <form method="post" action="{{ url_for('exports.export_rejected_xlsx') }}">
+      <button class="btn" type="submit">Export Rejected XLSX</button>
+    </form>
+    <br>
     <a class="btn" href="{{ url_for('index') }}">← Back to Dashboard</a>
   </div>
 

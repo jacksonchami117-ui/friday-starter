@@ -1,41 +1,46 @@
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>FRIDAY — Dashboard</title>
-  <style>
-    body { font-family: Arial, sans-serif; padding: 24px; }
-    .cards { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
-    .card { border: 1px solid #ddd; border-radius: 8px; padding: 16px; }
-    .card h3 { margin: 6px 0 10px; }
-    a.btn { display: inline-block; padding: 8px 12px; border-radius: 6px; background: #111827; color: #fff; text-decoration: none; }
-    a.btn:hover { filter: brightness(1.08); }
-  </style>
-</head>
-<body>
-  <h1>FRIDAY — Dashboard</h1>
-  <div class="cards">
-    <div class="card">
-      <h3>Leads</h3>
-      <p>Upload CSV/XLSX and review accepted vs rejected rows.</p>
-      <a class="btn" href="/leads/">Open Leads</a>
-    </div>
-    <div class="card">
-      <h3>Render</h3>
-      <p>Preview accepted leads and run dummy render.</p>
-      <a class="btn" href="/render/start">Open Render</a>
-    </div>
-    <div class="card">
-      <h3>Exports</h3>
-      <p>Browse output files and download as ZIP or CSV.</p>
-      <a class="btn" href="/exports/">Open Exports</a>
-    </div>
-    <div class="card">
-      <h3>Diagnostics</h3>
-      <p>Logs and quick health counters.</p>
-      <a class="btn" href="/diagnostics/">Open Diagnostics</a>
-    </div>
+{% extends "base.html" %}
+
+{% block content %}
+<h1>FRIDAY — Dashboard</h1>
+
+<!-- Quick Stats -->
+<div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-bottom: 24px;">
+  <div class="card">
+    <h3 style="color: var(--success); margin-top: 0;">{{ stats.accepted }}</h3>
+    <p class="muted">Accepted Leads</p>
   </div>
-</body>
-</html>
+  <div class="card">
+    <h3 style="color: var(--warning); margin-top: 0;">{{ stats.rejected }}</h3>
+    <p class="muted">Rejected Leads</p>
+  </div>
+  <div class="card">
+    <h3 style="color: var(--accent); margin-top: 0;">{{ stats.outputs }}</h3>
+    <p class="muted">Active Jobs</p>
+  </div>
+</div>
+
+<!-- Main Cards -->
+<div class="grid">
+  <div class="card">
+    <h3>Leads</h3>
+    <p>Upload CSV/XLSX and review accepted vs rejected rows.</p>
+    <a class="btn" href="/leads/">Open Leads</a>
+  </div>
+  <div class="card">
+    <h3>Render</h3>
+    <p>Preview accepted leads and run dummy render.</p>
+    <a class="btn" href="/render/start">Open Render</a>
+  </div>
+  <div class="card">
+    <h3>Exports</h3>
+    <p>Browse output files and download as ZIP or CSV.</p>
+    <a class="btn" href="/exports/">Open Exports</a>
+  </div>
+  <div class="card">
+    <h3>Diagnostics</h3>
+    <p>Logs and quick health counters.</p>
+    <a class="btn" href="/diagnostics/">Open Diagnostics</a>
+  </div>
+</div>
+{% endblock %}

@@ -78,10 +78,48 @@ def create_app():
             current_app.logger.exception("intro_boot.html failed, falling back to /home")
             return redirect(url_for("index"))
 
+    def get_dashboard_stats():
+        """Get dashboard statistics"""
+        d = app.config["DATA_DIR"]
+        accepted = os.path.join(d, "accepted_leads.csv")
+        rejected = os.path.join(d, "rejected_leads.csv")
+        outputs = os.path.join(d, "outputs", "videos")
+        
+        counts = {
+            "accepted": 0,
+            "rejected": 0,
+            "outputs": 0,
+        }
+        
+        if os.path.exists(accepted):
+            try:
+                with open(accepted, newline="", encoding="utf-8") as f:
+                    reader_count = sum(1 for _ in f)
+                    counts["accepted"] = reader_count - 1 if reader_count > 0 else 0
+            except:
+                counts["accepted"] = 0
+                
+        if os.path.exists(rejected):
+            try:
+                with open(rejected, newline="", encoding="utf-8") as f:
+                    reader_count = sum(1 for _ in f)
+                    counts["rejected"] = reader_count - 1 if reader_count > 0 else 0
+            except:
+                counts["rejected"] = 0
+                
+        if os.path.exists(outputs) and os.path.isdir(outputs):
+            try:
+                counts["outputs"] = len([n for n in os.listdir(outputs) if os.path.isfile(os.path.join(outputs, n))])
+            except:
+                counts["outputs"] = 0
+                
+        return counts
+
     @app.route("/home")
     def index():
         try:
-            return render_template("index.html")
+            stats = get_dashboard_stats()
+            return render_template("index.html", stats=stats)
         except Exception:
             current_app.logger.exception("index.html failed")
             return "Home failed to render (see logs).", 500

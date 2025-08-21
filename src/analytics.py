@@ -1,3 +1,2 @@
-# Content of src/analytics.py
-
-# Your Python code goes here
+# Contents of analytics.py
+# Chart logic for leads and jobs

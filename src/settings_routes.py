@@ -10,6 +10,10 @@ def _status(name, *envs):
     return {"name": name, "configured": ok, "env": ", ".join(envs)}
 
 @bp.route("/", methods=["GET"])
+def index():
+    return settings_home()
+
+@bp.route("/", methods=["GET"])
 def settings_home():
     providers = [
         _status("SendGrid Email", "SENDGRID_API_KEY", "EMAIL_FROM"),

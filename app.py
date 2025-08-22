@@ -135,6 +135,10 @@ def create_app():
         except Exception as e:
             return f"Error rendering template: {str(e)}", 500
 
+    @app.route("/home")
+    def home():
+        return render_template("dashboard.html")
+
     @app.route("/__debug/static")
     def __debug_static():
         sdir = os.path.join(base_dir, "static")

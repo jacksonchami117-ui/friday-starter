@@ -1,6 +1,15 @@
+import os
+import json
+from flask import request, jsonify
 from flask import Blueprint
 
+TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), '../templates')
+
 editor_bp = Blueprint("editor", __name__, url_prefix="/editor")
+
+@editor_bp.route("/", methods=["GET"])
+def index():
+    return editor_home()
 
 @editor_bp.route("/", methods=["GET"])
 def editor_home():
@@ -30,11 +39,3 @@ def list_manifests():
             cid = fn.replace("manifest_", "").replace(".json", "")
             manifests.append(cid)
     return jsonify({"campaigns": manifests})
-
-from flask import Blueprint
-
-editor_bp = Blueprint("editor", __name__, url_prefix="/editor")
-
-@editor_bp.route("/", methods=["GET"])
-def editor_home():
-    return "Editor module (placeholder)."

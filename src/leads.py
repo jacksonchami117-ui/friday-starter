@@ -54,7 +54,7 @@ def validate_row(row: dict):
     return reasons
 
 @leads_bp.route("/", methods=["GET"])
-def leads_home():
+def index():
     return render_template("leads.html")
 
 @leads_bp.route("/upload", methods=["POST"])

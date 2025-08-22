@@ -1,4 +1,3 @@
-
 import os
 import csv
 from flask import Blueprint, render_template
@@ -8,6 +7,10 @@ diagnostics_bp = Blueprint("diagnostics", __name__, url_prefix="/diagnostics")
 def _data_dir():
     base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     return os.getenv("DATA_DIR", os.path.join(base, "state"))
+
+@diagnostics_bp.route("/", methods=["GET"])
+def index():
+    return diag_home()
 
 @diagnostics_bp.route("/", methods=["GET"])
 def diag_home():

@@ -9,10 +9,6 @@ editor_bp = Blueprint("editor", __name__, url_prefix="/editor")
 
 @editor_bp.route("/", methods=["GET"])
 def index():
-    return editor_home()
-
-@editor_bp.route("/", methods=["GET"])
-def editor_home():
     return "Editor module (placeholder)."
 
 @editor_bp.route("/save/<campaign_id>", methods=["POST"])

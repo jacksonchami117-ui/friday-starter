@@ -11,10 +11,6 @@ def _status(name, *envs):
 
 @bp.route("/", methods=["GET"])
 def index():
-    return settings_home()
-
-@bp.route("/", methods=["GET"])
-def settings_home():
     providers = [
         _status("SendGrid Email", "SENDGRID_API_KEY", "EMAIL_FROM"),
         _status("Twilio SMS", "TWILIO_SID", "TWILIO_AUTH_TOKEN", "TWILIO_FROM"),

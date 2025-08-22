@@ -1,6 +1,5 @@
-
 import os, json, subprocess, csv, datetime as dt, hashlib
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, render_template
 
 render_bp = Blueprint('render', __name__, url_prefix='/render')
 
@@ -111,3 +110,7 @@ def run_render():
 
     flash(f"Rendered {ok}/{total} outputs (dummy files).", "success")
     return redirect(url_for("exports.explore"))
+
+@render_bp.route("/")
+def index():
+    return render_template("render.html")

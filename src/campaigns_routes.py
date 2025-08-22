@@ -1,3 +1,4 @@
+from __future__ import annotations
 from flask import Blueprint, render_template, send_file
 import os, csv, io
 
@@ -21,7 +22,6 @@ def download_progress(cid):
     w = csv.writer(sio)
     w.writerow(needed)
     return send_file(io.BytesIO(sio.getvalue().encode()), download_name="progress.csv", as_attachment=True)
-from __future__ import annotations
 import os, json, csv, io, time, uuid, datetime as dt
 from dataclasses import dataclass, asdict
 from typing import Any, Dict, List, Tuple

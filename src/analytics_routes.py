@@ -14,7 +14,7 @@ def parse_csv(path):
             for r in reader: rows.append(r)
     return rows
 
-@analytics_bp.route("/", endpoint="analytics_home")
+@analytics_bp.route("/", methods=["GET"], endpoint="analytics_home")
 def analytics_home():
     data = {}
     for fn in os.listdir(EXPORTS_DIR):

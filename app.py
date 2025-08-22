@@ -12,6 +12,7 @@ from src.render_routes import render_bp
 from src.exports import exports_bp
 from src.diagnostics_routes import diagnostics_bp
 from src.editor import editor_bp
+from src.analytics_routes import analytics_bp
 
 BUILD_HASH = str(int(time.time()))
 
@@ -162,6 +163,41 @@ def create_app():
                 rows.append(os.path.relpath(os.path.join(root, name), sdir))
         rows.sort()
         return "<pre>" + "\n".join(rows) + "</pre>"
+
+    # -------------------------------------------------
+    # Central Logging & Error Tracking (Sentry-ready)
+    # -------------------------------------------------
+    import logging
+    from logging.handlers import RotatingFileHandler
+    import os
+
+    LOG_DIR = os.environ.get("LOG_DIR", "./logs")
+    os.makedirs(LOG_DIR, exist_ok=True)
+
+    file_handler = RotatingFileHandler(
+        os.path.join(LOG_DIR, "friday.log"),
+        maxBytes=10 * 1024 * 1024,  # 10 MB
+        backupCount=5,
+    )
+    file_handler.setLevel(logging.INFO)
+    file_handler.setFormatter(logging.Formatter(
+        "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+    ))
+
+    if not app.logger.handlers:
+        app.logger.addHandler(file_handler)
+        app.logger.setLevel(logging.INFO)
+
+    # Optional: Sentry
+    if os.environ.get("SENTRY_DSN"):
+        import sentry_sdk
+        from sentry_sdk.integrations.flask import FlaskIntegration
+        sentry_sdk.init(
+            dsn=os.environ["SENTRY_DSN"],
+            integrations=[FlaskIntegration()],
+            traces_sample_rate=1.0,
+        )
+        app.logger.info("Sentry initialized")
 
     return app
 

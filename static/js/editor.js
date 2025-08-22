@@ -8,6 +8,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const addTextBtn = document.getElementById("addText");
   const preview = document.getElementById("manifestPreview");
   const campaignInput = document.getElementById("campaign-id");
+  const pageList = document.getElementById("page-list");
+  const addPageBtn = document.getElementById("add-page-btn");
+  const addScrollBtn = document.getElementById("add-scroll-btn");
+  const pageTypeSelector = document.getElementById("page-type-selector");
 
   const segments = []; // {type: "video"|"text", ...}
 
@@ -113,19 +117,22 @@ document.addEventListener("DOMContentLoaded", () => {
     alert("Job started: " + j.job_id);
   };
 
-  document.getElementById("add-scroll").onclick = () => {
-    const seg = document.createElement("div");
-    seg.className = "segment scroll";
-    seg.textContent = "Scroll Segment";
-    timeline.appendChild(seg);
-  };
+  addPageBtn.addEventListener("click", () => {
+    const li = document.createElement("li");
+    li.textContent = `Page: ${pageTypeSelector.value}`;
+    li.draggable = true;
+    li.addEventListener("dragstart", (e) => {
+      e.dataTransfer.setData("text/plain", e.target.id);
+    });
+    pageList.appendChild(li);
+  });
 
-  document.getElementById("add-page").onclick = () => {
-    const seg = document.createElement("div");
-    seg.className = "segment page";
-    seg.textContent = "New Page";
-    timeline.appendChild(seg);
-  };
+  addScrollBtn.addEventListener("click", () => {
+    const li = document.createElement("li");
+    li.textContent = "Scroll Segment";
+    li.draggable = true;
+    pageList.appendChild(li);
+  });
 
   document.getElementById("save-manifest").onclick = () => {
     const cid = campaignInput.value.trim() || "demo";

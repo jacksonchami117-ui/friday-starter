@@ -1,21 +1,28 @@
 {% extends "base.html" %}
 {% block content %}
 <h1>Editor</h1>
-<div id="editor">
-  <label for="campaign-id">Campaign ID:</label>
-  <input type="text" id="campaign-id" placeholder="demo">
-
-  <div class="drop-zone">
-    <p>Drag & drop videos/screenshots/images</p>
-    <input type="file" id="file-input" multiple>
+<!-- Pitchlane-style Editor -->
+<div id="editor-container">
+  <div id="timeline">
+    <button id="add-page-btn">Add Page</button>
+    <button id="add-scroll-btn">Add Scroll</button>
+    <ul id="page-list"></ul>
   </div>
 
-  <div id="timeline"></div>
+  <div id="page-types">
+    <select id="page-type-selector">
+      <option value="company">Company Website</option>
+      <option value="linkedin">LinkedIn Profile</option>
+      <option value="custom">Custom URL/Page</option>
+      <option value="image">Screenshot/Image</option>
+      <option value="mywebsite">My Website</option>
+      <option value="outro">Outro</option>
+    </select>
+  </div>
 
-  <button id="add-scroll">➕ Add Scroll Segment</button>
-  <button id="add-page">➕ Add Page</button>
-  <button id="save-manifest">💾 Save Manifest</button>
-  <button id="load-manifest">📂 Load Manifest</button>
+  <div id="preview">
+    <video id="preview-video" controls></video>
+  </div>
 </div>
 <script src="{{ url_for('static', filename='js/editor.js') }}"></script>
 {% endblock %}

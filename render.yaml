@@ -2,11 +2,15 @@ services:
   - type: web
     name: friday-starter
     env: python
-    plan: starter
     buildCommand: |
-      apt-get update && apt-get install -y ffmpeg git-lfs
+      pip install --upgrade pip --break-system-packages
       pip install -r requirements.txt
-    startCommand: gunicorn app:app -w 1 -k gthread --threads 4 --timeout 120
+      git lfs install
+      apt-get update && apt-get install -y ffmpeg
+      # force static/logging dirs
+      mkdir -p logs
+      ls -la static || true
+    startCommand: gunicorn app:app
     envVars:
       - key: ADMIN_PASSWORD
         sync: false
@@ -18,12 +22,15 @@ services:
   name: friday-starter
         name: friday-starter
         env: python
-        plan: starter
         buildCommand: |
-          apt-get update && apt-get install -y ffmpeg git-lfs
-          git lfs install
+          pip install --upgrade pip --break-system-packages
           pip install -r requirements.txt
-        startCommand: gunicorn app:app -w 1 -k gthread --threads 4 --timeout 120
+          git lfs install
+          apt-get update && apt-get install -y ffmpeg
+          # force static/logging dirs
+          mkdir -p logs
+          ls -la static || true
+        startCommand: gunicorn app:app
         envVars:
           - key: ADMIN_PASSWORD
             sync: false

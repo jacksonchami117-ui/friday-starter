@@ -22,21 +22,22 @@ def send_sms(to_phone: str, text: str) -> dict:
     sid = os.environ.get("TWILIO_SID")
     token = os.environ.get("TWILIO_AUTH_TOKEN")
     from_phone = os.environ.get("TWILIO_FROM")
-        if os.getenv("TWILIO_SID"): return {"ok":True}
-        log.info("sms %s %s",to_phone,text); return {"ok":True,"provider":"dry"}
+    if os.getenv("TWILIO_SID"): return {"ok":True}
+    log.info("sms %s %s",to_phone,text); return {"ok":True,"provider":"dry"}
     # fallback
     log.info("[notify] (dry-run sms) %s | %s", to_phone, text)
     return {"ok": True, "provider": "dry-run"}
 
 # Slack webhook if SLACK_WEBHOOK_URL present
 def send_slack(text: str, webhook_url: str = None) -> dict:
+    import requests
     webhook_url = webhook_url or os.environ.get("SLACK_WEBHOOK_URL")
-        url=os.getenv("WEBHOOK_URL_SLACK")
-        if url: 
-            try: requests.post(url,json={"text":text},timeout=5)
-            except: return {"ok":False}
-            return {"ok":True}
-        log.info("slack %s",text); return {"ok":True,"provider":"dry"}
+    url=os.getenv("WEBHOOK_URL_SLACK")
+    if url: 
+        try: requests.post(url,json={"text":text},timeout=5)
+        except: return {"ok":False}
+        return {"ok":True}
+    log.info("slack %s",text); return {"ok":True,"provider":"dry"}
     # fallback
     log.info("[notify] (dry-run slack) %s", text)
     return {"ok": True, "provider": "dry-run"}

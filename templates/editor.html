@@ -1,2 +1,21 @@
-<h1>Editor page</h1>
-<p><a href="/">Back</a></p>
+{% extends "base.html" %}
+{% block content %}
+<h1>Editor</h1>
+<div id="editor">
+  <label for="campaign-id">Campaign ID:</label>
+  <input type="text" id="campaign-id" placeholder="demo">
+
+  <div class="drop-zone">
+    <p>Drag & drop videos/screenshots/images</p>
+    <input type="file" id="file-input" multiple>
+  </div>
+
+  <div id="timeline"></div>
+
+  <button id="add-scroll">➕ Add Scroll Segment</button>
+  <button id="add-page">➕ Add Page</button>
+  <button id="save-manifest">💾 Save Manifest</button>
+  <button id="load-manifest">📂 Load Manifest</button>
+</div>
+<script src="{{ url_for('static', filename='js/editor.js') }}"></script>
+{% endblock %}

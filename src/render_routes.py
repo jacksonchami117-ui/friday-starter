@@ -1,8 +1,6 @@
 
-import os
-import csv
-import pandas as pd
-from flask import Blueprint, current_app, render_template, redirect, url_for, flash
+import os, json, subprocess, csv, datetime as dt, hashlib
+from flask import Blueprint, request, jsonify
 
 render_bp = Blueprint('render', __name__, url_prefix='/render')
 
@@ -17,6 +15,44 @@ def _paths():
         "outputs": os.path.join(d, "outputs", "videos"),
         "progress": os.path.join(d, "render_progress.csv"),
     }
+
+STATE_DIR = os.environ.get("STATE_DIR", "state")
+OUTPUT_DIR = os.path.join(STATE_DIR, "outputs")
+TEMPLATES_DIR = os.path.join(STATE_DIR, "templates")
+EXPORTS_DIR = os.path.join(STATE_DIR, "exports")
+for d in (OUTPUT_DIR, EXPORTS_DIR): os.makedirs(d, exist_ok=True)
+
+def progress_path(cid): return os.path.join(EXPORTS_DIR, f"{cid}_progress.csv")
+def token_for(val): return hashlib.sha1(val.encode()).hexdigest()[:16]
+
+@render_bp.route("/start/<campaign_id>", methods=["POST"])
+def start_render(campaign_id):
+    manifest_path = os.path.join(TEMPLATES_DIR, f"manifest_{campaign_id}.json")
+    if not os.path.exists(manifest_path):
+        return jsonify({"error": f"No manifest for {campaign_id}"}), 404
+
+    with open(manifest_path) as f:
+        manifest = json.load(f)
+
+    out = os.path.join(OUTPUT_DIR, f"{campaign_id}.mp4")
+    thumb = os.path.join(OUTPUT_DIR, f"{campaign_id}.png")
+
+    subprocess.run([
+        "ffmpeg", "-f", "lavfi", "-i", "color=c=blue:s=320x240:d=5",
+        "-vf", "drawtext=text='Rendered Video':x=(w-text_w)/2:y=(h-text_h)/2:fontsize=24:fontcolor=white",
+        out, "-y"
+    ])
+    subprocess.run(["ffmpeg", "-i", out, "-ss", "00:00:01", "-vframes", "1", thumb, "-y"])
+
+    headers = ["campaign","date","status","video","thumb","share"]
+    row = [campaign_id, dt.datetime.utcnow().isoformat(), "done", out, thumb, f"/v/{campaign_id}/{token_for(campaign_id)}"]
+    csv_exists = os.path.exists(progress_path(campaign_id))
+    with open(progress_path(campaign_id), "a", newline="") as f:
+        w = csv.writer(f)
+        if not csv_exists: w.writerow(headers)
+        w.writerow(row)
+
+    return jsonify({"ok": True, "output": out, "thumb": thumb, "progress": progress_path(campaign_id)})
 
 @render_bp.route("/start", methods=["GET"])
 def start_rendering():

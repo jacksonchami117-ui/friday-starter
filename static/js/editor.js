@@ -1,4 +1,4 @@
-(function(){
+document.addEventListener("DOMContentLoaded", () => {
   const dz = document.getElementById("dropzone");
   const fp = document.getElementById("filepicker");
   const assets = document.getElementById("assets");
@@ -7,6 +7,7 @@
   const startBtn = document.getElementById("startRender");
   const addTextBtn = document.getElementById("addText");
   const preview = document.getElementById("manifestPreview");
+  const campaignInput = document.getElementById("campaign-id");
 
   const segments = []; // {type: "video"|"text", ...}
 
@@ -112,4 +113,45 @@
     alert("Job started: " + j.job_id);
   };
 
-})();
+  document.getElementById("add-scroll").onclick = () => {
+    const seg = document.createElement("div");
+    seg.className = "segment scroll";
+    seg.textContent = "Scroll Segment";
+    timeline.appendChild(seg);
+  };
+
+  document.getElementById("add-page").onclick = () => {
+    const seg = document.createElement("div");
+    seg.className = "segment page";
+    seg.textContent = "New Page";
+    timeline.appendChild(seg);
+  };
+
+  document.getElementById("save-manifest").onclick = () => {
+    const cid = campaignInput.value.trim() || "demo";
+    const segments = [...timeline.querySelectorAll(".segment")].map(s => ({
+      type: s.className.replace("segment ", ""),
+      label: s.textContent
+    }));
+    fetch(`/editor/save/${cid}`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({segments})
+    }).then(r=>r.json()).then(d=>alert("Saved "+d.path));
+  };
+
+  document.getElementById("load-manifest").onclick = () => {
+    const cid = campaignInput.value.trim() || "demo";
+    fetch(`/editor/load/${cid}`).then(r=>r.json()).then(data=>{
+      timeline.innerHTML="";
+      if(data.segments){
+        data.segments.forEach(seg=>{
+          const div=document.createElement("div");
+          div.className="segment "+seg.type;
+          div.textContent=seg.label||seg.type;
+          timeline.appendChild(div);
+        });
+      } else alert("No manifest for "+cid);
+    });
+  };
+});

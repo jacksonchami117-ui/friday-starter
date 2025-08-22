@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Analytics</h1>
+{% for cid, rows in data.items() %}
+  <h2>Campaign: {{cid}}</h2>
+  <div class="gallery">
+  {% for r in rows %}
+    <div class="thumb-card">
+      <img src="{{ r.thumb | replace('state','') }}" alt="thumb" class="thumb">
+      <p>Status: {{r.status}}</p>
+      <a href="{{ r.share }}" target="_blank">Share Link</a><br>
+      <a href="{{ r.video }}">Download Video</a>
+    </div>
+  {% endfor %}
+  </div>
+  <a href="{{ url_for('analytics.download_csv', cid=cid) }}">⬇️ Download CSV</a>
+  <button onclick="retry('{{cid}}')">Retry</button>
+{% endfor %}
+<script>
+function retry(cid){
+  fetch(`/analytics/retry/${cid}`,{method:"POST"})
+    .then(r=>r.json()).then(d=>alert("Retry: "+d.message));
+}
+</script>
+{% endblock %}

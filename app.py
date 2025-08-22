@@ -166,8 +166,21 @@ def create_app():
         app.register_blueprint(accounts_bp)
         app.register_blueprint(landing_bp)
 
+
         @app.route("/")
-        def home(): return render_template("campaigns.html", cards=[])
+        def intro():
+            if os.getenv("SKIP_INTRO") == "1":
+                return redirect("/home")
+            return render_template("intro_boot.html")
+
+        @app.route("/skip-intro")
+        def skip_intro():
+            os.environ["SKIP_INTRO"] = "1"
+            return redirect("/home")
+
+        @app.route("/home")
+        def dashboard():
+            return render_template("dashboard.html")
 
         # Housekeeping
         housekeeping.start_housekeeping_thread()

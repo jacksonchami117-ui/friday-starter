@@ -15,7 +15,7 @@ services:
       - key: USE_DB
         value: "1"
     services:
-      - type: web
+  name: friday-starter
         name: friday-starter
         env: python
         plan: starter

@@ -1,2 +1,20 @@
-<h1>Render page</h1>
-<p><a href="/">Back</a></p>
+{% extends "base.html" %}
+{% block content %}
+<h1>Render</h1>
+<form id="render-form">
+  <label for="campaign-id">Campaign ID:</label>
+  <input type="text" id="campaign-id" placeholder="demo">
+  <button type="submit">Start Render</button>
+</form>
+<pre id="render-log"></pre>
+<script>
+document.getElementById("render-form").onsubmit = e => {
+  e.preventDefault();
+  const cid = document.getElementById("campaign-id").value || "demo";
+  fetch(`/render/start/${cid}`, {method:"POST"})
+    .then(r=>r.json()).then(d=>{
+      document.getElementById("render-log").textContent = JSON.stringify(d,null,2);
+    });
+};
+</script>
+{% endblock %}

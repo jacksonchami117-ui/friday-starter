@@ -1,32 +1,45 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>FRIDAY is online</h1>
-{% if pending_decisions and pending_decisions > 0 %}
-  <div class="banner warning">You have {{ pending_decisions }} pending decision(s). <a href="/decisions">Review →</a></div>
-{% else %}
-  <div class="banner success">All systems green.</div>
-{% endif %}
+<div class="dashboard">
+  <h1>FRIDAY — Dashboard</h1>
+  <div class="card-grid">
 
-<div class="grid">
-  <div class="card">
-    <h2>Projects</h2>
-    <p>{{ projects|length }} projects</p>
-    <a class="cta" href="/projects">Open →</a>
-  </div>
-  <div class="card">
-    <h2>SOPs</h2>
-    <p>{{ sops|length }} SOPs</p>
-    <a class="cta" href="/sops">Open →</a>
-  </div>
-  <div class="card">
-    <h2>Decisions</h2>
-    <p>{{ decisions|length }} decisions</p>
-    <a class="cta" href="/decisions">Open →</a>
-  </div>
-  <div class="card">
-    <h2>Runs</h2>
-    <p>{{ runs|length }} runs</p>
-    <a class="cta" href="/runs">Open →</a>
+    <div class="card">
+      <h2>📂 Leads</h2>
+      <p>Upload CSV/XLSX and enrich with scraping.</p>
+      <a href="{{ url_for('leads.index') }}" class="btn">Open Leads</a>
+    </div>
+
+    <div class="card">
+      <h2>🎬 Editor</h2>
+      <p>Drag & drop videos, add scrolling, images, LinkedIn, websites.</p>
+      <a href="{{ url_for('editor.index') }}" class="btn">Open Editor</a>
+    </div>
+
+    <div class="card">
+      <h2>🎥 Render</h2>
+      <p>Compose videos with FFmpeg and personalization.</p>
+      <a href="{{ url_for('render.index') }}" class="btn">Open Render</a>
+    </div>
+
+    <div class="card">
+      <h2>📊 Analytics</h2>
+      <p>Campaign performance, retries, gallery view.</p>
+      <a href="{{ url_for('analytics.index') }}" class="btn">Open Analytics</a>
+    </div>
+
+    <div class="card">
+      <h2>⚙️ Settings</h2>
+      <p>Notification providers, test messages, configs.</p>
+      <a href="{{ url_for('settings.index') }}" class="btn">Open Settings</a>
+    </div>
+
+    <div class="card">
+      <h2>🩺 Diagnostics</h2>
+      <p>Logs and system counters.</p>
+      <a href="{{ url_for('diagnostics.index') }}" class="btn">Open Diagnostics</a>
+    </div>
+
   </div>
 </div>
 {% endblock %}

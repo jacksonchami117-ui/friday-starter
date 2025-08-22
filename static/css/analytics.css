@@ -1,0 +1,16 @@
+.gallery {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+.thumb-card {
+  border: 1px solid #ccc;
+  padding: 0.5rem;
+  border-radius: 6px;
+  background: #fff;
+  width: 200px;
+}
+.thumb {
+  width: 100%;
+  border-radius: 4px;
+}

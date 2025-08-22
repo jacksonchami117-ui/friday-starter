@@ -1,3 +1,12 @@
+import pandas as pd
+
+def enrich_leads(csv_file):
+    # TODO: integrate with real scraper (Clearbit, Apollo, etc.)
+    # placeholder enrich
+    leads = pd.read_csv(csv_file)
+    leads["verified_email"] = leads["email"].apply(lambda e: e if "@" in str(e) else None)
+    leads["first_name"] = leads["name"].apply(lambda n: n.split()[0] if pd.notna(n) else "")
+    return leads
 
 import os
 import csv

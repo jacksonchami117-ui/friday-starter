@@ -8,6 +8,10 @@ def _data_dir():
     base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     return os.getenv("DATA_DIR", os.path.join(base, "state"))
 
+@diagnostics_bp.route("/", methods=["GET"], endpoint="diagnostics_home")
+def diagnostics_home():
+    return render_template("diagnostics.html")
+
 @diagnostics_bp.route("/", methods=["GET"], endpoint="dashboard")
 def dashboard():
     d = _data_dir()

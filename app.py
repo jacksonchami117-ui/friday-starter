@@ -3,6 +3,7 @@ import logging
 from flask import Flask, render_template, send_from_directory, redirect, url_for, current_app
 from flask_login import LoginManager, login_required, current_user
 from werkzeug.exceptions import HTTPException
+import time
 
 # Blueprints
 from src.leads import leads_bp
@@ -11,6 +12,8 @@ from src.render_routes import render_bp
 from src.exports import exports_bp
 from src.diagnostics_routes import diagnostics_bp
 from src.editor import editor_bp
+
+BUILD_HASH = str(int(time.time()))
 
 def create_app():
     app = Flask(__name__)
@@ -21,6 +24,8 @@ def create_app():
     base_dir = os.path.dirname(os.path.abspath(__file__))
     data_dir = os.getenv("DATA_DIR", os.path.join(base_dir, "state"))
     app.config["DATA_DIR"] = data_dir
+
+    app.jinja_env.globals.update(BUILD_HASH=BUILD_HASH)
 
     # Ensure runtime dirs exist
     for p in [

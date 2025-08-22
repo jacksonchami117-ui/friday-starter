@@ -132,63 +132,8 @@ def create_app():
             return "FRIDAY safe-mode: up. Visit /home or /health."
         try:
             return render_template("intro_boot.html")
-        import os
-        from flask import Flask, render_template
-        from flask_login import LoginManager
-        from src import db, housekeeping
-
-        app = Flask(__name__)
-        app.secret_key = os.environ.get("SECRET_KEY","dev")
-
-        USE_DB = os.environ.get("USE_DB","0") in ("1","true")
-        if USE_DB: db.init()
-
-        # Auth setup
-        login_manager = LoginManager(app)
-        login_manager.login_view = "accounts.login"
-
-        @login_manager.user_loader
-        def load_user(uid):
-            row = db.get_user_by_id(uid)
-            if row:
-                from flask_login import UserMixin
-                class U(UserMixin): pass
-                u=U(); u.id=str(row["id"]); u.email=row["email"]; return u
-            return None
-
-        # Blueprints
-        from src.campaigns_routes import bp as campaigns_bp
-        from src.settings_routes import bp as settings_bp
-        from src.accounts_routes import bp as accounts_bp
-        from src.landing_routes import bp as landing_bp
-        app.register_blueprint(campaigns_bp)
-        app.register_blueprint(settings_bp)
-        app.register_blueprint(accounts_bp)
-        app.register_blueprint(landing_bp)
-
-
-        @app.route("/")
-        def intro():
-            if os.getenv("SKIP_INTRO") == "1":
-                return redirect("/home")
-            return render_template("intro_boot.html")
-
-        @app.route("/skip-intro")
-        def skip_intro():
-            os.environ["SKIP_INTRO"] = "1"
-            return redirect("/home")
-
-        @app.route("/home")
-        def dashboard():
-            return render_template("dashboard.html")
-
-        # Housekeeping
-        housekeeping.start_housekeeping_thread()
-
-        if __name__=="__main__":
-            app.run(host="0.0.0.0", port=10000, debug=True)
-        rows.sort()
-        return "<pre>" + "\n".join(rows) + "</pre>"
+        except Exception as e:
+            return f"Error rendering template: {str(e)}", 500
 
     @app.route("/__debug/static")
     def __debug_static():

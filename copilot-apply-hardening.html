@@ -1,0 +1,541 @@
+<!--
+FRIDAY Starter — Final Hardening Pack
+Adds:
+- Multi-user auth (Flask-Login), default admin bootstrap
+- Optional org scaffold (single-org by default)
+- Public landing pages for rendered videos (/v/<campaign_id>/<token>)
+- Slack/Webhook alerts + tests from Settings
+- Export CSV gains 'share' URL column (backwards-compatible generation)
+- Minimal tests for accounts + landing routes
+
+Non-breaking design:
+- If USE_DB is unset, keep legacy ADMIN_PASSWORD path working.
+- If env secrets missing, providers fall back to safe no-ops.
+-->
+
+<!-- =========================
+1) requirements.txt — add flask-login
+========================= -->
+<patch file="requirements.txt" mode="append">
+flask-login==0.6.3
+</patch>
+
+<!-- =========================
+2) src/db.py — tiny sqlite helper for users/orgs
+========================= -->
+<file path="src/db.py">
+from __future__ import annotations
+import os, sqlite3, contextlib, hashlib
+from typing import Optional, Tuple
+from werkzeug.security import generate_password_hash, check_password_hash
+
+def db_path() -> str:
+    base = os.environ.get("STATE_DIR", "./state")
+    os.makedirs(base, exist_ok=True)
+    return os.path.join(base, "db.sqlite")
+
+def get_conn():
+    conn = sqlite3.connect(db_path())
+    conn.row_factory = sqlite3.Row
+    return conn
+
+def init():
+    with contextlib.closing(get_conn()) as c:
+        cur = c.cursor()
+        cur.execute("""CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )""")
+        cur.execute("""CREATE TABLE IF NOT EXISTS orgs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT UNIQUE NOT NULL
+        )""")
+        cur.execute("""CREATE TABLE IF NOT EXISTS user_orgs (
+            user_id INTEGER NOT NULL,
+            org_id INTEGER NOT NULL,
+            UNIQUE(user_id, org_id)
+        )""")
+        c.commit()
+
+def get_user_by_email(email: str) -> Optional[sqlite3.Row]:
+    with contextlib.closing(get_conn()) as c:
+        cur = c.cursor()
+        cur.execute("SELECT * FROM users WHERE email = ?", (email.lower().strip(),))
+        return cur.fetchone()
+
+def create_user(email: str, password: str) -> int:
+    with contextlib.closing(get_conn()) as c:
+        cur = c.cursor()
+        cur.execute("INSERT INTO users(email, password_hash) VALUES (?,?)",
+                    (email.lower().strip(), generate_password_hash(password)))
+        c.commit()
+        return cur.lastrowid
+
+def verify_user(email: str, password: str) -> bool:
+    row = get_user_by_email(email)
+    return bool(row and check_password_hash(row["password_hash"], password))
+
+def ensure_default_admin():
+    email = os.environ.get("DEFAULT_ADMIN","admin@example.com")
+    pwd = os.environ.get("DEFAULT_ADMIN_PASSWORD") or os.environ.get("ADMIN_PASSWORD") or "admin"
+    if not get_user_by_email(email):
+        create_user(email, pwd)
+
+def email_token(email: str) -> str:
+    return hashlib.sha1((email or "").lower().encode("utf-8")).hexdigest()[:16]
+</file>
+
+<!-- =========================
+3) app.py — init DB + LoginManager + default admin
+========================= -->
+<patch file="app.py" mode="update-or-insert-after" marker="=== FRIDAY System Startup ===">
+# --- DB & Login
+try:
+    import os
+    USE_DB = os.environ.get("USE_DB","0") in ("1","true","True")
+    if USE_DB:
+        from src import db as _db
+        _db.init()
+        _db.ensure_default_admin()
+        from flask_login import LoginManager, UserMixin
+        login_manager = LoginManager(app)
+        login_manager.login_view = "accounts.login"
+
+        class User(UserMixin):
+            def __init__(self, row):
+                self.id = str(row["id"])
+                self.email = row["email"]
+
+        @login_manager.user_loader
+        def load_user(user_id):
+            from src.db import get_conn
+            with get_conn() as c:
+                cur = c.cursor()
+                cur.execute("SELECT * FROM users WHERE id = ?", (user_id,))
+                row = cur.fetchone()
+                return User(row) if row else None
+
+        from src.accounts_routes import bp as accounts_bp
+        app.register_blueprint(accounts_bp)
+except Exception as e:
+    print("[WARN] DB/Login bootstrap failed:", e)
+
+# --- Public landing pages
+try:
+    from src.landing_routes import bp as landing_bp
+    app.register_blueprint(landing_bp)
+except Exception as e:
+    print("[WARN] landing blueprint not loaded:", e)
+</patch>
+
+<!-- =========================
+4) src/accounts_routes.py — login/logout/register (admin bootstrap already handled)
+========================= -->
+<file path="src/accounts_routes.py">
+from __future__ import annotations
+import os
+from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask_login import login_user, logout_user, login_required
+from werkzeug.security import check_password_hash
+from .db import get_user_by_email, create_user, verify_user
+from flask import current_app
+
+bp = Blueprint("accounts", __name__, url_prefix="/accounts")
+
+@bp.route("/login", methods=["GET","POST"])
+def login():
+    if request.method=="POST":
+        email = request.form.get("email","").strip().lower()
+        password = request.form.get("password","")
+        if verify_user(email, password):
+            # build lightweight user
+            from src.db import get_user_by_email
+            row = get_user_by_email(email)
+            from flask_login import UserMixin
+            class U(UserMixin):
+                pass
+            u = U(); u.id=str(row["id"]); setattr(u,"email",email)
+            login_user(u)
+            return redirect(request.args.get("next") or "/campaigns/")
+        flash("Invalid credentials", "error")
+    return render_template("accounts_login.html")
+
+@bp.route("/logout")
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for("accounts.login"))
+
+@bp.route("/register", methods=["GET","POST"])
+def register():
+    # Allow open register only if env ALLOW_REGISTER=1 (otherwise admin-only via DB bootstrap)
+    allow = os.environ.get("ALLOW_REGISTER","0") in ("1","true","True")
+    if not allow:
+        return render_template("accounts_register.html", disabled=True)
+    if request.method=="POST":
+        email = request.form.get("email","").strip().lower()
+        password = request.form.get("password","")
+        if not email or not password:
+            return render_template("accounts_register.html", error="Email and password required")
+        try:
+            create_user(email, password)
+            return redirect(url_for("accounts.login"))
+        except Exception as e:
+            return render_template("accounts_register.html", error="Could not create user")
+    return render_template("accounts_register.html")
+</file>
+
+<!-- =========================
+5) templates/accounts_login.html & accounts_register.html
+========================= -->
+<file path="templates/accounts_login.html">
+{% extends "base.html" %}
+{% block title %}Sign in{% endblock %}
+{% block content %}
+<section class="auth">
+  <h1>Sign in</h1>
+  <form method="post" class="form">
+    <label>Email <input type="email" name="email" required></label>
+    <label>Password <input type="password" name="password" required></label>
+    <button class="btn btn-primary">Sign in</button>
+  </form>
+  <p class="muted">Default admin is created automatically when USE_DB=1.</p>
+</section>
+{% endblock %}
+</file>
+
+<file path="templates/accounts_register.html">
+{% extends "base.html" %}
+{% block title %}Create account{% endblock %}
+{% block content %}
+<section class="auth">
+  <h1>Create account</h1>
+  {% if disabled %}
+    <p class="muted">Self‑registration is disabled. Ask your admin.</p>
+  {% else %}
+    {% if error %}<p class="warn">{{ error }}</p>{% endif %}
+    <form method="post" class="form">
+      <label>Email <input type="email" name="email" required></label>
+      <label>Password <input type="password" name="password" required></label>
+      <button class="btn btn-primary">Create</button>
+    </form>
+  {% endif %}
+</section>
+{% endblock %}
+</file>
+
+<!-- =========================
+6) Public landing pages for leads (/v/<cid>/<token>)
+========================= -->
+<file path="src/landing_routes.py">
+from __future__ import annotations
+import os, csv, io, hashlib
+from flask import Blueprint, render_template, abort
+from .campaigns_routes import _progress_path
+
+bp = Blueprint("landing", __name__)
+
+def token_for(email: str) -> str:
+    return hashlib.sha1((email or "").lower().encode("utf-8")).hexdigest()[:16]
+
+@bp.route("/v/<cid>/<token>", methods=["GET"])
+def view(cid: str, token: str):
+    p = _progress_path(cid)
+    if not os.path.exists(p):
+        abort(404)
+    with open(p,"r") as f:
+        rows = list(csv.DictReader(f))
+    # try to locate by token derived from email
+    target = None
+    for r in rows:
+        em = (r.get("email") or "").strip().lower()
+        if token_for(em) == token:
+            target = r; break
+    if not target:
+        abort(404)
+    return render_template("landing_view.html", r=target, cid=cid, token=token)
+</file>
+
+<file path="templates/landing_view.html">
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Your personalized video</title>
+  <style>
+    body{font-family:ui-sans-serif,system-ui,Segoe UI,Roboto,Helvetica,Arial;background:#0c0d11;color:#fff;margin:0}
+    .wrap{max-width:840px;margin:0 auto;padding:24px}
+    .card{background:#141621;border:1px solid #222436;border-radius:12px;padding:16px}
+    .muted{color:#9aa0ac}
+    .cta{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;background:#8b5cf6;color:#fff;text-decoration:none}
+    .thumb{margin-top:12px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>{{ r.first }} — this one is just for you</h1>
+    <div class="card">
+      {% if r.video %}
+        <video controls style="width:100%;border-radius:8px" src="{{ r.video }}"></video>
+      {% else %}
+        <p class="muted">Your video is still processing. Please check back soon.</p>
+      {% endif %}
+      <div class="thumb">
+        {% if r.thumb %}<img src="{{ r.thumb }}" alt="thumbnail" style="max-width:240px;border-radius:8px">{% endif %}
+      </div>
+      <p class="muted">Business: {{ r.business }} · Website: {{ r.website }}</p>
+      <p><a class="cta" href="mailto:{{ r.email }}?subject=Re:%20Your%20video">Reply by email</a></p>
+    </div>
+  </div>
+</body>
+</html>
+</file>
+
+<!-- =========================
+7) Slack/Webhook alerts — extend notify.py + Settings UI to test webhook
+========================= -->
+<patch file="src/notify.py" mode="update-or-insert-after" marker="def send_sms">
+def send_slack(text: str) -> dict:
+    import os, json
+    url = os.environ.get("WEBHOOK_URL_SLACK")
+    if not url:
+        log.info("[notify] (dry-run slack) %s", text)
+        return {"ok": True, "provider": "dry-run"}
+    try:
+        import requests
+        r = requests.post(url, json={"text": text}, timeout=10)
+        return {"ok": r.ok, "status": r.status_code}
+    except Exception as e:
+        log.exception("send_slack failed: %s", e)
+        return {"ok": False, "error": str(e)}
+</patch>
+
+<patch file="templates/settings.html" mode="update-or-insert-after" marker="<p class=\"muted\">Providers are configured via environment variables. We never store your secrets.</p>">
+<form class="card" onsubmit="return testSlack(this)" style="margin-top:16px;padding:12px">
+  <h3>Slack/Webhook</h3>
+  <p class="muted">Set <code>WEBHOOK_URL_SLACK</code> to enable. We will POST a basic message payload.</p>
+  <div style="display:flex;gap:8px;align-items:center">
+    <input type="text" name="text" placeholder="Test message" value="FRIDAY webhook test">
+    <button class="btn btn-primary">Send test webhook</button>
+  </div>
+</form>
+<script>
+function testSlack(form){
+  const fd = new FormData(form);
+  fetch('/settings/test/slack', {method:'POST', body:fd}).then(r=>r.json()).then(d=>{
+    alert(d.ok ? 'Webhook delivered' : ('Failed: '+(d.error||d.status||'unknown')));
+  });
+  return false;
+}
+</script>
+</patch>
+
+<patch file="src/settings_routes.py" mode="update-or-insert-after" marker="def test_sms():
+    to = request.form.get(\"to\")">
+@bp.route("/test/slack", methods=["POST"])
+def test_slack():
+    text = request.form.get("text","FRIDAY webhook test")
+    from .notify import send_slack
+    res = send_slack(text)
+    return jsonify(res)
+</patch>
+
+<!-- =========================
+8) Export CSV — add 'share' URL column (derived), backwards compatible
+========================= -->
+<patch file="src/campaigns_routes.py" mode="replace" marker="def download_progress(cid: str):">
+@bp.route("/<cid>/progress.csv", methods=["GET"])
+def download_progress(cid: str):
+    """
+    Columns (superset, order preserved when upgrading):
+    business,first,last,email,website,phone,date,status,reason,video,thumb,share
+    """
+    base_cols = ["business","first","last","email","website","phone","date","status","reason","video","thumb"]
+    needed = base_cols + ["share"]
+    p = _progress_path(cid)
+
+    # synthesize empty
+    if not os.path.exists(p):
+        import io, csv
+        sio = io.StringIO()
+        w = csv.writer(sio); w.writerow(needed)
+        return send_file(io.BytesIO(sio.getvalue().encode("utf-8")), as_attachment=True, download_name="render_progress.csv", mimetype="text/csv")
+
+    with open(p,"r",newline="") as f:
+        text = f.read().strip()
+    if not text:
+        import io, csv
+        sio = io.StringIO()
+        w = csv.writer(sio); w.writerow(needed)
+        return send_file(io.BytesIO(sio.getvalue().encode("utf-8")), as_attachment=True, download_name="render_progress.csv", mimetype="text/csv")
+
+    lines = text.splitlines()
+    head = [h.strip() for h in lines[0].split(",")]
+    rows = [r.split(",") for r in lines[1:]]
+
+    # map -> dicts
+    def idx(name): return head.index(name) if name in head else -1
+    out = []
+    for a in rows:
+        d = { head[i]: (a[i] if i < len(a) else "") for i in range(len(head)) }
+        # derive share URL
+        email = (d.get("email") or "").strip().lower()
+        from .landing_routes import token_for
+        tok = token_for(email) if email else ""
+        base_url = os.environ.get("BASE_URL_PUBLIC","")
+        share = ""
+        if tok:
+            # prefer external BASE_URL_PUBLIC if provided, else relative path
+            share = (base_url.rstrip("/") + f"/v/{cid}/{tok}") if base_url else f"/v/{cid}/{tok}"
+        # write full row respecting needed order
+        row = []
+        for col in needed:
+            if col=="share":
+                row.append(share)
+            else:
+                row.append(d.get(col,""))
+        out.append(row)
+
+    # write upgraded csv
+    import io, csv
+    sio = io.StringIO()
+    w = csv.writer(sio); w.writerow(needed)
+    for r in out: w.writerow(r)
+    return send_file(io.BytesIO(sio.getvalue().encode("utf-8")), as_attachment=True, download_name="render_progress.csv", mimetype="text/csv")
+</patch>
+
+<!-- =========================
+9) pl_export.js — show share URL as link (append after video col)
+========================= -->
+<patch file="static/js/pl_export.js" mode="replace">
+(function(){
+  const tbody = document.querySelector('#export-table tbody');
+  const search = document.getElementById('search');
+  const btnExport = document.getElementById('btn-export');
+
+  function row(r){
+    const tr=document.createElement('tr');
+    const td = (text)=>{ const d=document.createElement('td'); d.textContent=text||''; return d; };
+    tr.appendChild(td(r.business));
+    tr.appendChild(td(r.first));
+    tr.appendChild(td(r.last));
+    tr.appendChild(td(r.email));
+    tr.appendChild(td(r.website));
+    tr.appendChild(td(r.phone||''));
+    tr.appendChild(td(r.date||''));
+    tr.appendChild(td(window.statusText.compact(r.status)));
+    tr.appendChild(td(r.video||''));
+    // share link
+    const s=document.createElement('td');
+    if(r.share){ const a=document.createElement('a'); a.href=r.share; a.textContent="Open"; a.target="_blank"; s.appendChild(a); }
+    tr.appendChild(s);
+    return tr;
+  }
+
+  function load(){
+    fetch(`/campaigns/${window.CAMPAIGN_ID}/progress.csv`).then(r=>r.text()).then(text=>{
+      const lines = text.trim().split(/\r?\n/); if(lines.length===0) return;
+      const head = lines.shift().split(',');
+      const idx = (name)=> head.indexOf(name);
+      const rs = lines.map(l=>l.split(',')).map(a=>({
+        business:a[idx('business')]||'',first:a[idx('first')]||'',last:a[idx('last')]||'',
+        email:a[idx('email')]||'',website:a[idx('website')]||'',phone:a[idx('phone')]||'',
+        date:a[idx('date')]||'',status:a[idx('status')]||'',video:a[idx('video')]||'',thumb:a[idx('thumb')]||'',
+        share:a[idx('share')]||''
+      }));
+      render(rs);
+    });
+  }
+
+  function render(rs){
+    const q = (search.value||'').toLowerCase();
+    const r2 = rs.filter(r=>{
+      return !q || [r.business,r.first,r.last,r.email,r.website].some(x=> (x||'').toLowerCase().includes(q));
+    });
+    tbody.innerHTML = ""; r2.forEach(r=>tbody.appendChild(row(r)));
+  }
+
+  search.addEventListener('input', load);
+  btnExport.addEventListener('click', ()=>{ window.location.href = `/campaigns/${window.CAMPAIGN_ID}/progress.csv`; });
+  load();
+})();
+</patch>
+
+<!-- =========================
+10) base.html — add Accounts/Settings to top nav (if not already)
+========================= -->
+<patch file="templates/base.html" mode="update-or-insert-after" marker="</nav>">
+<nav class="top-nav-links">
+  <a href="/campaigns/">Campaigns</a>
+  <a href="/settings/">Settings</a>
+  <a href="/accounts/login">Account</a>
+</nav>
+</patch>
+
+<!-- =========================
+11) tests — accounts & landing basics
+========================= -->
+<file path="tests/test_hardening.py">
+import os, re
+os.environ.setdefault("ADMIN_PASSWORD","admin")
+os.environ.setdefault("USE_DB","1")  # enable accounts
+
+def test_accounts_login_page():
+    import app as appmod
+    c = appmod.app.test_client()
+    r = c.get("/accounts/login")
+    assert r.status_code in (200,302)
+
+def test_landing_404_when_missing_csv():
+    import app as appmod
+    c = appmod.app.test_client()
+    r = c.get("/v/unknown/abcd1234")
+    assert r.status_code == 404
+</file>
+
+<!-- =========================
+12) Docs — review checklist for hardening + env notes
+========================= -->
+<file path="docs/COPILOT_REVIEW_HARDENING.md">
+# Hardening Review
+
+## Auth & Users
+- [ ] With USE_DB=1, a default admin is created on first boot (email from DEFAULT_ADMIN, password from DEFAULT_ADMIN_PASSWORD or ADMIN_PASSWORD)
+- [ ] /accounts/login works and redirects to /campaigns on success
+- [ ] ALLOW_REGISTER=0 blocks self-serve registration
+
+## Landing Pages
+- [ ] /v/<cid>/<token> serves a page for rows present in progress.csv
+- [ ] Export CSV includes a 'share' column that opens the landing page
+- [ ] BASE_URL_PUBLIC affects the full share URL generation
+
+## Webhooks
+- [ ] /settings can send a Slack test (WEBHOOK_URL_SLACK)
+- [ ] When webhook env is missing, test reports dry-run (no crash)
+
+## Backwards Compatibility
+- [ ] Legacy ADMIN_PASSWORD flow still works when USE_DB is not set
+- [ ] All new features gracefully no-op without DB or webhooks
+</file>
+
+<patch file="README.md" mode="append">
+
+### Multi-user Accounts
+- Enable DB users by setting `USE_DB=1`. On first boot we create a default admin:
+  - `DEFAULT_ADMIN` (email, default `admin@example.com`)
+  - `DEFAULT_ADMIN_PASSWORD` (falls back to `ADMIN_PASSWORD` or `admin`)
+- Sign in at `/accounts/login`. To allow open sign-up set `ALLOW_REGISTER=1`.
+
+### Public Landing Pages
+- Each rendered lead gets a share URL:
+  - Relative: `/v/<campaign_id>/<email_token>`
+  - Absolute when `BASE_URL_PUBLIC` is set
+- CSV export now adds a `share` column.
+
+### Slack/Webhook Alerts
+- Set `WEBHOOK_URL_SLACK` to enable Slack alerts. Test from `/settings`.
+
+</patch>

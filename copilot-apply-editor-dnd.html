@@ -1,0 +1,542 @@
+<!--
+FRIDAY Starter — Editor Timeline (DnD + Trimming + Overlays) & Asset Uploads
+Scope:
+- /campaigns/<cid>/editor: Pitchlane-style timeline editor with:
+  * Drag assets from library to video track
+  * Resize handles to trim in/out
+  * Drag to reorder / move along timeline
+  * Text overlay track with inline editing
+  * Zoom and snapping
+  * Save/Load manifest to /campaigns/<cid>/manifest (GET/POST)
+- Asset uploads (video/image) via drag-and-drop:
+  * /campaigns/<cid>/assets/upload saves under STATE_DIR/campaigns/<cid>/assets
+  * Generates thumbnails via ffmpeg to assets/thumbs
+  * List assets: /campaigns/<cid>/assets
+  * Serve files and thumbs: /campaigns/<cid>/assets/file/<fn>, /campaigns/<cid>/assets/thumbs/<fn>
+- Safe fallbacks: all routes tolerate missing ffmpeg (no crash).
+- Update Generate logic: post manifest to /render/api/start if available; fallback to /render/start.
+-->
+
+<!-- =========================
+A) campaigns_routes.py — add routes & helpers for editor + assets
+========================= -->
+<patch file="src/campaigns_routes.py" mode="append">
+# ===== Editor + Assets (Append) =====
+import subprocess, shlex
+from flask import send_from_directory
+
+def _assets_dir(cid: str) -> str:
+    p = os.path.join(_camp_dir(cid), "assets")
+    os.makedirs(p, exist_ok=True)
+    return p
+
+def _assets_thumbs_dir(cid: str) -> str:
+    p = os.path.join(_assets_dir(cid), "thumbs")
+    os.makedirs(p, exist_ok=True)
+    return p
+
+def _gen_thumb_asset(cid: str, filepath: str) -> str | None:
+    # Generate a small jpg using ffmpeg; fallback to None if not available.
+    try:
+        out = os.path.join(_assets_thumbs_dir(cid), os.path.basename(filepath) + ".jpg")
+        cmd = f"ffmpeg -y -ss 00:00:01 -i {shlex.quote(filepath)} -frames:v 1 -vf scale=320:-1 {shlex.quote(out)}"
+        subprocess.run(cmd, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=30)
+        return out if os.path.exists(out) else None
+    except Exception:
+        return None
+
+# override earlier helper to return a proper url
+def _find_any_thumb():
+    td = _thumbs_dir()
+    for f in os.listdir(td):
+        fl = f.lower()
+        if fl.endswith((".jpg",".png",".jpeg",".webp")):
+            return url_for("campaigns.thumb", filename=f)
+    return None
+
+@bp.route("/thumbs/<filename>")
+def thumb(filename: str):
+    return send_from_directory(_thumbs_dir(), filename)
+
+# -------- Editor pages & manifest --------
+@bp.route("/<cid>/editor", methods=["GET"])
+def editor_page(cid: str):
+    meta = _load_meta(cid)
+    # ensure manifest exists
+    if not os.path.exists(_manifest_path(cid)):
+        with open(_manifest_path(cid), "w") as f:
+            json.dump({"segments": [], "overlays": []}, f)
+    return render_template("campaign_editor.html", meta=meta)
+
+@bp.route("/<cid>/manifest", methods=["GET"])
+def get_manifest(cid: str):
+    p = _manifest_path(cid)
+    if not os.path.exists(p):
+        return jsonify({"segments": [], "overlays": []})
+    with open(p, "r") as f:
+        return jsonify(json.load(f))
+
+# assets API
+ALLOWED_EXT = {".mp4",".mov",".m4v",".webm",".png",".jpg",".jpeg",".gif"}
+
+@bp.route("/<cid>/assets", methods=["GET"])
+def list_assets(cid: str):
+    base = _assets_dir(cid)
+    items = []
+    for fn in sorted(os.listdir(base)):
+        if fn == "thumbs": 
+            continue
+        ext = os.path.splitext(fn.lower())[1]
+        if ext in ALLOWED_EXT:
+            items.append({
+                "name": fn,
+                "url": url_for("campaigns.asset_file", cid=cid, filename=fn),
+                "thumb": url_for("campaigns.asset_thumb", cid=cid, filename=fn+".jpg") if os.path.exists(os.path.join(_assets_thumbs_dir(cid), fn+".jpg")) else None,
+                "type": "image" if ext in {".png",".jpg",".jpeg",".gif"} else "video"
+            })
+    return jsonify({"ok": True, "items": items})
+
+@bp.route("/<cid>/assets/upload", methods=["POST"])
+def upload_asset(cid: str):
+    f = request.files.get("file")
+    if not f:
+        return jsonify({"ok": False, "error": "No file provided"}), 400
+    name = f.filename
+    ext = os.path.splitext(name.lower())[1]
+    if ext not in ALLOWED_EXT:
+        return jsonify({"ok": False, "error": f"Unsupported file type: {ext}"}), 400
+    path = os.path.join(_assets_dir(cid), name)
+    f.save(path)
+    thumb = _gen_thumb_asset(cid, path)
+    return jsonify({
+        "ok": True,
+        "item": {
+            "name": name,
+            "url": url_for("campaigns.asset_file", cid=cid, filename=name),
+            "thumb": url_for("campaigns.asset_thumb", cid=cid, filename=name+".jpg") if thumb else None,
+            "type": "image" if ext in {".png",".jpg",".jpeg",".gif"} else "video"
+        }
+    })
+
+@bp.route("/<cid>/assets/file/<path:filename>")
+def asset_file(cid: str, filename: str):
+    return send_from_directory(_assets_dir(cid), filename, as_attachment=False)
+
+@bp.route("/<cid>/assets/thumbs/<path:filename>")
+def asset_thumb(cid: str, filename: str):
+    return send_from_directory(_assets_thumbs_dir(cid), filename, as_attachment=False)
+</patch>
+
+<!-- =========================
+B) Link "Editor" from Campaign steps
+========================= -->
+<patch file="templates/campaign_detail.html" mode="update-or-insert-after" marker="<ol>">
+<ol>
+  {% for s in steps %}
+  {% set link = url_for('campaigns.editor_page', cid=meta.id) if s in ['Create Video Script','Record Template Video'] else (url_for('campaigns.import_page', cid=meta.id) if s=='Import Leads' else (url_for('campaigns.analytics_page', cid=meta.id) if s=='Analytics' else '#')) %}
+  <li class="{{ 'active' if loop.first }}">
+    <a href="{{ link }}">
+      <span class="check {{ meta.steps.get(s) in ['Done'] and 'done' or '' }}"></span>
+      <span class="label">{{ s }}</span>
+      <span class="status">{{ meta.steps.get(s,'Not started') }}</span>
+    </a>
+  </li>
+  {% endfor %}
+</ol>
+</patch>
+
+<!-- =========================
+C) New template: campaign_editor.html
+========================= -->
+<file path="templates/campaign_editor.html">
+{% extends "base.html" %}
+{% block title %}Editor — {{ meta.name }}{% endblock %}
+{% block content %}
+<div class="editor-layout">
+  <aside class="library">
+    <header>
+      <h2>Assets</h2>
+      <div class="muted">Drop video/image files here</div>
+    </header>
+    <div id="asset-drop" class="dropzone" tabindex="0" role="button" aria-label="Upload assets">
+      <div class="dz-inner">
+        <div class="dz-icon">⬆</div>
+        <div class="dz-title">Drag files here or click to browse</div>
+        <div class="dz-sub">MP4, MOV, WEBM, PNG, JPG</div>
+      </div>
+      <input id="asset-file" type="file" multiple accept=".mp4,.mov,.m4v,.webm,.png,.jpg,.jpeg,.gif" hidden />
+    </div>
+    <ul id="asset-list" class="asset-list" aria-label="Asset list"></ul>
+  </aside>
+
+  <section class="workspace">
+    <div class="preview">
+      <div class="preview-head">
+        <h2>Preview</h2>
+        <div class="actions">
+          <label>Zoom <input id="zoom" type="range" min="1" max="5" step="0.5" value="1"></label>
+          <button id="btn-add-text" class="btn btn-ghost">Add text overlay</button>
+          <button id="btn-save" class="btn btn-primary">Save</button>
+        </div>
+      </div>
+      <div class="stage">
+        <video id="stage-video" controls></video>
+        <div id="overlay-layer" class="overlay-layer" aria-live="polite"></div>
+      </div>
+    </div>
+
+    <div class="timeline" id="timeline" aria-label="Timeline editor">
+      <div class="track-label">Video</div>
+      <div class="track" id="track-video"></div>
+      <div class="track-label">Text Overlays</div>
+      <div class="track overlays" id="track-overlays"></div>
+    </div>
+  </section>
+</div>
+<script>window.CAMPAIGN_ID="{{ meta.id }}";</script>
+<script src="/static/js/status_text.js"></script>
+<script src="/static/js/pl_editor.js"></script>
+<link rel="stylesheet" href="/static/css/pl_editor.css">
+{% endblock %}
+</file>
+
+<!-- =========================
+D) CSS for the Editor
+========================= -->
+<file path="static/css/pl_editor.css">
+.editor-layout{display:grid;grid-template-columns:300px 1fr;gap:16px}
+.library{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:12px;max-height:calc(100vh - 180px);overflow:auto}
+.asset-list{list-style:none;padding:0;margin:12px 0;display:grid;grid-template-columns:1fr;gap:8px}
+.asset-item{display:flex;gap:8px;align-items:center;border:1px solid var(--border);border-radius:8px;padding:8px;background:#14161f;cursor:grab}
+.asset-item img{width:56px;height:36px;object-fit:cover;border-radius:6px}
+.asset-item .meta{display:flex;flex-direction:column}
+.asset-item .name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px}
+.workspace .preview{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:12px}
+.preview-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.stage{position:relative;background:#0d0f15;border-radius:8px;display:flex;align-items:center;justify-content:center;min-height:280px}
+.stage video{max-width:100%;border-radius:8px}
+.overlay-layer{position:absolute;inset:0;pointer-events:none}
+.overlay-box{position:absolute;padding:4px 6px;background:rgba(0,0,0,.6);color:#fff;border-radius:6px;pointer-events:auto;cursor:text}
+.overlay-box[contenteditable="true"]{outline:2px solid var(--primary)}
+.timeline{margin-top:12px;background:#0f1118;border:1px solid var(--border);border-radius:12px;padding:8px}
+.track-label{color:var(--muted);font-size:.85rem;margin:6px 0}
+.track{position:relative;min-height:56px;border:1px dashed #2a2d3a;border-radius:10px;padding:6px;background:#131522;overflow-x:auto;white-space:nowrap}
+.segment{display:inline-block;position:absolute;height:36px;background:#2a2f48;color:#fff;border:1px solid #3a3f5f;border-radius:8px;padding:6px 28px 6px 8px;cursor:grab}
+.segment .name{font-size:.85rem}
+.segment .handle{position:absolute;top:0;width:10px;height:100%;cursor:ew-resize;background:linear-gradient(90deg,rgba(255,255,255,.15),transparent)}
+.segment .handle.left{left:0;border-top-left-radius:8px;border-bottom-left-radius:8px}
+.segment .handle.right{right:0;border-top-right-radius:8px;border-bottom-right-radius:8px}
+.segment.selected{outline:2px solid var(--primary)}
+.overlays .segment{background:#39446b}
+.dropzone{border:2px dashed var(--border);background:var(--panel);border-radius:12px;padding:16px;text-align:center;margin-top:8px}
+.dropzone.drag{border-color:var(--primary)}
+</file>
+
+<!-- =========================
+E) Editor JS (drag, resize, overlays, save)
+========================= -->
+<file path="static/js/pl_editor.js">
+(function(){
+  const cid = window.CAMPAIGN_ID;
+  const assetsUl = document.getElementById('asset-list');
+  const trackVideo = document.getElementById('track-video');
+  const trackOver = document.getElementById('track-overlays');
+  const timeline = document.getElementById('timeline');
+  const zoomInput = document.getElementById('zoom');
+  const stageVideo = document.getElementById('stage-video');
+  const overlayLayer = document.getElementById('overlay-layer');
+  const btnSave = document.getElementById('btn-save');
+  const btnAddText = document.getElementById('btn-add-text');
+
+  let manifest = { segments: [], overlays: [] };
+  let pxPerSec = 80; // base zoom
+
+  function timeToX(t){ return Math.round(t * pxPerSec); }
+  function xToTime(x){ return Math.max(0, x / pxPerSec); }
+
+  function loadAssets(){
+    fetch(`/campaigns/${cid}/assets`).then(r=>r.json()).then(d=>{
+      assetsUl.innerHTML='';
+      (d.items||[]).forEach(item=>{
+        const li = document.createElement('li');
+        li.className='asset-item';
+        li.setAttribute('draggable','true');
+        li.dataset.name=item.name;
+        li.dataset.url=item.url;
+        li.dataset.type=item.type;
+        li.innerHTML = (item.thumb? `<img src="${item.thumb}" alt="">` : `<div style="width:56px;height:36px;border-radius:6px;background:#232739"></div>`) + 
+                       `<div class="meta"><div class="name" title="${item.name}">${item.name}</div><div class="muted">${item.type}</div></div>`;
+        li.addEventListener('dragstart',ev=>{
+          ev.dataTransfer.setData('text/plain', JSON.stringify(item));
+        });
+        assetsUl.appendChild(li);
+      });
+    });
+  }
+
+  function createSeg(name, url, start, end){
+    const id = 'seg_'+Math.random().toString(36).slice(2,8);
+    manifest.segments.push({ id, src:url, name, start: start||0, end: end||5 });
+    draw();
+  }
+
+  function createOverlay(text, start, end, x, y){
+    const id = 'ov_'+Math.random().toString(36).slice(2,8);
+    manifest.overlays.push({ id, text: text||"Your text {{first}}", start:start||0, end:end||3, x:x||20, y:y||20, size:18, color:"#ffffff" });
+    draw();
+  }
+
+  function draw(){
+    // clear tracks
+    [trackVideo, trackOver].forEach(t=>{ t.innerHTML=''; t.style.width = Math.max(600, timeToX(totalDuration()+4)) + 'px'; });
+
+    // segments
+    manifest.segments.forEach(seg=>{
+      const el = document.createElement('div');
+      el.className='segment';
+      el.tabIndex=0;
+      el.dataset.id=seg.id;
+      el.style.left = timeToX(seg.start)+'px';
+      el.style.width = Math.max(20, timeToX(seg.end-seg.start))+'px';
+      el.innerHTML = `<div class="name">${seg.name||extractName(seg.src)}</div><div class="handle left"></div><div class="handle right"></div>`;
+      addSegHandlers(el, seg, trackVideo);
+      trackVideo.appendChild(el);
+    });
+
+    // overlays
+    manifest.overlays.forEach(ov=>{
+      const el = document.createElement('div');
+      el.className='segment';
+      el.tabIndex=0;
+      el.dataset.id=ov.id;
+      el.style.left = timeToX(ov.start)+'px';
+      el.style.width = Math.max(20, timeToX(ov.end-ov.start))+'px';
+      el.innerHTML = `<div class="name">"${ov.text}"</div><div class="handle left"></div><div class="handle right"></div>`;
+      addSegHandlers(el, ov, trackOver, true);
+      trackOver.appendChild(el);
+    });
+
+    renderOverlayLayer();
+  }
+
+  function extractName(u){ try { return decodeURIComponent(u.split('/').pop()); } catch(e){ return u; } }
+
+  function totalDuration(){
+    if(manifest.segments.length===0) return 0;
+    return Math.max(...manifest.segments.map(s=>s.end));
+  }
+
+  function addSegHandlers(el, item, container, isOverlay){
+    function select(){ document.querySelectorAll('.segment').forEach(x=>x.classList.remove('selected')); el.classList.add('selected'); }
+    el.addEventListener('mousedown', e=>{ if(e.target.classList.contains('handle')) return; select(); dragging(e, item, container); });
+    el.addEventListener('keydown', e=>{
+      if(!el.classList.contains('selected')) return;
+      const step = e.shiftKey ? 1 : 0.1;
+      if(e.key==='Delete'){ // remove
+        if(isOverlay) manifest.overlays = manifest.overlays.filter(x=>x.id!==item.id);
+        else manifest.segments = manifest.segments.filter(x=>x.id!==item.id);
+        draw(); return;
+      }
+      if(['ArrowLeft','ArrowRight'].includes(e.key)){
+        const delta = (e.key==='ArrowLeft'?-step:step);
+        item.start = Math.max(0, item.start + delta);
+        item.end = Math.max(item.start+0.1, item.end + delta);
+        draw();
+      }
+    });
+    // resize left/right
+    el.querySelector('.handle.left').addEventListener('mousedown', e=>resizing(e,item,true));
+    el.querySelector('.handle.right').addEventListener('mousedown', e=>resizing(e,item,false));
+  }
+
+  function dragging(e, item, container){
+    const startX = e.clientX, origLeft = timeToX(item.start);
+    const onMove = (ev)=>{
+      const dx = ev.clientX - startX;
+      const nx = Math.max(0, origLeft + dx);
+      item.start = xToTime(nx);
+      item.end = Math.max(item.start+0.1, item.end + xToTime(dx));
+      draw();
+    };
+    const onUp = ()=>{ window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }
+
+  function resizing(e, item, leftSide){
+    e.stopPropagation();
+    const startX = e.clientX, origStart = item.start, origEnd = item.end;
+    const onMove = (ev)=>{
+      const dx = ev.clientX - startX;
+      if(leftSide){
+        const ns = Math.max(0, origStart + xToTime(dx));
+        item.start = Math.min(ns, item.end-0.1);
+      }else{
+        const ne = Math.max(origStart+0.1, origEnd + xToTime(dx));
+        item.end = ne;
+      }
+      draw();
+    };
+    const onUp = ()=>{ window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }
+
+  // Overlay layer: show first overlay text at approximate position
+  function renderOverlayLayer(){
+    overlayLayer.innerHTML='';
+    manifest.overlays.forEach(ov=>{
+      const box = document.createElement('div');
+      box.className='overlay-box';
+      box.style.left = (ov.x||20) + 'px';
+      box.style.top = (ov.y||20) + 'px';
+      box.style.fontSize = (ov.size||18) + 'px';
+      box.style.color = ov.color || '#fff';
+      box.textContent = ov.text;
+      box.setAttribute('contenteditable','false');
+      box.addEventListener('dblclick', ()=>{
+        box.setAttribute('contenteditable','true'); box.focus();
+      });
+      box.addEventListener('blur', ()=>{
+        box.setAttribute('contenteditable','false'); 
+        ov.text = box.textContent.trim() || ov.text;
+      });
+      overlayLayer.appendChild(box);
+    });
+  }
+
+  // Drag target: video track
+  trackVideo.addEventListener('dragover', e=>{ e.preventDefault(); });
+  trackVideo.addEventListener('drop', e=>{
+    e.preventDefault();
+    const data = e.dataTransfer.getData('text/plain');
+    if(!data) return;
+    const item = JSON.parse(data);
+    const t = xToTime(e.offsetX);
+    createSeg(item.name, item.url, t, t+5);
+  });
+
+  // Text overlay add
+  btnAddText.addEventListener('click', ()=> createOverlay("Your text {{first}}", 0, 3, 20, 20));
+
+  // Save manifest
+  btnSave.addEventListener('click', ()=>{
+    fetch(`/campaigns/${cid}/manifest`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(manifest)
+    }).then(r=>r.json()).then(d=>{
+      if(d && d.ok) alert("Saved.");
+      else alert("Save failed.");
+    }).catch(()=>alert("Save failed."));
+  });
+
+  // Asset upload (library dropzone)
+  const dz = document.getElementById('asset-drop');
+  const fi = document.getElementById('asset-file');
+  function uploadOne(file){
+    const fd = new FormData();
+    fd.append('file', file);
+    return fetch(`/campaigns/${cid}/assets/upload`, { method:'POST', body: fd }).then(r=>r.json());
+  }
+  function pick(){ fi.click(); }
+  fi.addEventListener('change', ()=>{
+    const files = Array.from(fi.files||[]);
+    Promise.all(files.map(uploadOne)).then(loadAssets);
+  });
+  dz.addEventListener('click', pick);
+  dz.addEventListener('dragover', e=>{ e.preventDefault(); dz.classList.add('drag');});
+  dz.addEventListener('dragleave', ()=> dz.classList.remove('drag'));
+  dz.addEventListener('drop', e=>{
+    e.preventDefault(); dz.classList.remove('drag');
+    const files = Array.from(e.dataTransfer.files||[]);
+    Promise.all(files.map(uploadOne)).then(loadAssets);
+  });
+
+  // Zoom
+  zoomInput.addEventListener('input', ()=>{
+    pxPerSec = 80 * parseFloat(zoomInput.value||'1');
+    draw();
+  });
+
+  // Load manifest + assets
+  fetch(`/campaigns/${cid}/manifest`).then(r=>r.json()).then(m=>{ manifest = m||manifest; draw(); });
+  loadAssets();
+})();
+</file>
+
+<!-- =========================
+F) Update Generate logic to send manifest to /render/api/start (fallback)
+========================= -->
+<patch file="static/js/pl_generate.js" mode="replace">
+(function(){
+  const startBtn = document.getElementById('btn-start');
+  const jobsWrap = document.getElementById('jobs');
+  const bar = document.getElementById('bar');
+  const ul = document.getElementById('job-list');
+
+  function li(text){ const li=document.createElement('li'); li.textContent=text; return li; }
+
+  function pollStatus(){
+    fetch('/render/status').then(r=>r.json()).then(data=>{
+      const total = data.total || (data.items? data.items.length : 0) || 1;
+      const done = data.done || (data.items? data.items.filter(x=>x.status==='DONE').length:0);
+      const pct = Math.round((done/total)*100);
+      bar.style.width = pct + "%";
+      ul.innerHTML = "";
+      (data.items||[]).slice(-10).forEach(j=>{
+        const friendly = window.statusText.toUser(j.status, j.reason);
+        ul.appendChild(li(`${friendly.primary}${friendly.detail? ' — '+friendly.detail:''}`));
+      });
+      if(done < total){ setTimeout(pollStatus, 1500); }
+    }).catch(()=> setTimeout(pollStatus, 2000));
+  }
+
+  async function startWithManifest(){
+    try{
+      const manifest = await fetch(`/campaigns/${window.CAMPAIGN_ID}/manifest`).then(r=>r.json());
+      // Try new API first
+      const res = await fetch('/render/api/start', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ manifest, cid: window.CAMPAIGN_ID })
+      });
+      if(res.ok){ pollStatus(); return; }
+      // Fallback to legacy start
+      await fetch('/render/start', { method:'POST' });
+      pollStatus();
+    }catch(e){
+      await fetch('/render/start', { method:'POST' });
+      pollStatus();
+    }
+  }
+
+  startBtn.addEventListener('click', ()=>{
+    startBtn.disabled = true;
+    jobsWrap.hidden = false;
+    startWithManifest();
+  });
+})();
+</patch>
+
+<!-- =========================
+G) README + review checklist update
+========================= -->
+<patch file="README.md" mode="append">
+
+### Timeline Editor (New)
+- Drag assets into a video track, drag to reorder, resize to trim
+- Text overlay track with inline editing (supports {{tokens}} for lead fields)
+- Zoom & snapping feel; keyboard: arrows to nudge (Shift=1s), Delete to remove
+- Save/Load manifest via `/campaigns/<cid>/manifest`
+- Asset uploads at `/campaigns/<cid>/assets/upload` (video/image), thumbnails via ffmpeg
+</patch>
+
+<patch file="docs/COPILOT_REVIEW.md" mode="append">
+## Editor DnD — Reviewer Checklist
+- [ ] Dragging assets onto the video track creates segments at the drop time
+- [ ] Resize handles constrain to ≥ 0.1s and prevent negative durations
+- [ ] Keyboard shortcuts: Arrows nudge, Shift=1s, Delete removes
+- [ ] Text overlays are editable inline; saved into manifest with x/y/size/color
+- [ ] Uploading assets creates server files in STATE_DIR and generates thumbnails (if ffmpeg present)
+- [ ] /render/api/start receives the current manifest; legacy /render/start fallback still works
+- [ ] All routes return friendly messages; no stack traces leak to UI
+</patch>

@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Login - FRIDAY{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-4">
+            <div class="card shadow">
+                <div class="card-body p-5">
+                    <div class="text-center mb-4">
+                        <h1 class="h4 text-gray-900">Welcome Back!</h1>
+                        <p class="text-muted">Sign in to your FRIDAY account</p>
+                    </div>
+
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+
+                    <form method="POST">
+                        <div class="form-group mb-3">
+                            <input type="email" class="form-control form-control-lg" 
+                                   name="email" placeholder="Email Address" required 
+                                   value="{{ request.form.email or '' }}">
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <input type="password" class="form-control form-control-lg" 
+                                   name="password" placeholder="Password" required>
+                        </div>
+                        
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" name="remember" id="remember">
+                            <label class="form-check-label" for="remember">
+                                Remember me
+                            </label>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary btn-lg btn-block w-100">
+                            Sign In
+                        </button>
+                    </form>
+
+                    {% if config.get('ENABLE_REGISTRATION') %}
+                    <hr class="my-4">
+                    <div class="text-center">
+                        <a class="small" href="{{ url_for('accounts.register') }}">Create an Account!</a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

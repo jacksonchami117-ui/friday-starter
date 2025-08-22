@@ -1,6 +1,7 @@
 import os
 import logging
 from flask import Flask, render_template, send_from_directory, redirect, url_for, current_app
+from flask_login import LoginManager, login_required, current_user
 from werkzeug.exceptions import HTTPException
 
 # Blueprints
@@ -15,6 +16,7 @@ def create_app():
     app = Flask(__name__)
     app.secret_key = os.getenv("SECRET_KEY", "dev-secret-key")
     app.config["TEMPLATES_AUTO_RELOAD"] = True
+    app.config['ENABLE_REGISTRATION'] = os.environ.get("ENABLE_REGISTRATION", "").lower() in ("1", "true", "yes")
 
     base_dir = os.path.dirname(os.path.abspath(__file__))
     data_dir = os.getenv("DATA_DIR", os.path.join(base_dir, "state"))
@@ -30,8 +32,30 @@ def create_app():
         os.path.join(data_dir, "batches"),
         os.path.join(data_dir, "assets"),
         os.path.join(data_dir, "templates"),
+        os.path.join(data_dir, "exports"),
     ]:
         os.makedirs(p, exist_ok=True)
+
+    # Initialize database and Flask-Login
+    try:
+        from src import db
+        db.init()
+        db.ensure_default_admin()
+        
+        from src.user import User
+        
+        login_manager = LoginManager()
+        login_manager.init_app(app)
+        login_manager.login_view = 'accounts.login'
+        login_manager.login_message = 'Please log in to access this page.'
+        login_manager.login_message_category = 'info'
+        
+        @login_manager.user_loader
+        def load_user(email):
+            return User.get(email)
+            
+    except ImportError as e:
+        print(f"Warning: Could not initialize authentication: {e}")
 
     # Logging to file + console
     log_path = os.path.join(data_dir, "logs", "app.log")
@@ -41,6 +65,40 @@ def create_app():
         handlers=[logging.FileHandler(log_path), logging.StreamHandler()],
     )
     app.logger.info("=== FRIDAY System Startup ===")
+
+    # --- Authentication blueprint
+    try:
+        from src.accounts_routes import bp as accounts_bp
+        app.register_blueprint(accounts_bp, url_prefix='/accounts')
+    except Exception as e:
+        print("[WARN] accounts blueprint not loaded:", e)
+        
+    # --- Landing pages (public, no auth required)
+    try:
+        from src.landing_routes import bp as landing_bp
+        app.register_blueprint(landing_bp)
+    except Exception as e:
+        print("[WARN] landing blueprint not loaded:", e)
+
+    # --- Settings blueprint + housekeeping
+    try:
+        from src.settings_routes import bp as settings_bp
+        app.register_blueprint(settings_bp)
+    except Exception as e:
+        print("[WARN] settings blueprint not loaded:", e)
+
+    try:
+        from src.housekeeping import start_housekeeping_thread
+        start_housekeeping_thread()
+    except Exception as e:
+        print("[WARN] housekeeping not started:", e)
+
+    # --- Campaigns blueprint (Pitchlane-style UI)
+    try:
+        from src.campaigns_routes import bp as campaigns_bp
+        app.register_blueprint(campaigns_bp)
+    except Exception as e:
+        print("[WARN] campaigns blueprint not loaded:", e)
 
     # Register blueprints
     app.register_blueprint(leads_bp)
@@ -74,44 +132,48 @@ def create_app():
             return "FRIDAY safe-mode: up. Visit /home or /health."
         try:
             return render_template("intro_boot.html")
-        except Exception:
-            current_app.logger.exception("intro_boot.html failed, falling back to /home")
-            return redirect(url_for("index"))
+        import os
+        from flask import Flask, render_template
+        from flask_login import LoginManager
+        from src import db, housekeeping
 
-    @app.route("/home")
-    def index():
-        try:
-            return render_template("index.html")
-        except Exception:
-            current_app.logger.exception("index.html failed")
-            return "Home failed to render (see logs).", 500
+        app = Flask(__name__)
+        app.secret_key = os.environ.get("SECRET_KEY","dev")
 
-    @app.route("/skip-intro")
-    def skip_intro():
-        return redirect(url_for("index"))
+        USE_DB = os.environ.get("USE_DB","0") in ("1","true")
+        if USE_DB: db.init()
 
-    @app.route("/health")
-    def health():
-        return "OK", 200
+        # Auth setup
+        login_manager = LoginManager(app)
+        login_manager.login_view = "accounts.login"
 
-    @app.route("/media/assets/<path:filename>")
-    def media_assets(filename):
-        return send_from_directory(os.path.join(data_dir, "assets"), filename)
+        @login_manager.user_loader
+        def load_user(uid):
+            row = db.get_user_by_id(uid)
+            if row:
+                from flask_login import UserMixin
+                class U(UserMixin): pass
+                u=U(); u.id=str(row["id"]); u.email=row["email"]; return u
+            return None
 
-    @app.route("/media/thumbs/<path:filename>")
-    def media_thumbs(filename):
-        return send_from_directory(os.path.join(data_dir, "outputs", "thumbs"), filename)
+        # Blueprints
+        from src.campaigns_routes import bp as campaigns_bp
+        from src.settings_routes import bp as settings_bp
+        from src.accounts_routes import bp as accounts_bp
+        from src.landing_routes import bp as landing_bp
+        app.register_blueprint(campaigns_bp)
+        app.register_blueprint(settings_bp)
+        app.register_blueprint(accounts_bp)
+        app.register_blueprint(landing_bp)
 
-    # Debug helpers
-    @app.route("/__debug/templates")
-    def __debug_templates():
-        rows = []
-        tdir = os.path.join(base_dir, "templates")
-        if not os.path.isdir(tdir):
-            return "<pre>(no /templates)</pre>"
-        for root, _, files in os.walk(tdir):
-            for name in files:
-                rows.append(os.path.relpath(os.path.join(root, name), tdir))
+        @app.route("/")
+        def home(): return render_template("campaigns.html", cards=[])
+
+        # Housekeeping
+        housekeeping.start_housekeeping_thread()
+
+        if __name__=="__main__":
+            app.run(host="0.0.0.0", port=10000, debug=True)
         rows.sort()
         return "<pre>" + "\n".join(rows) + "</pre>"
 

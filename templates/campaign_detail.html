@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+{% block title %}{{ meta.name }}{% endblock %}
+{% block content %}
+<div class="campaign-header">
+  <h1>{{ meta.name }}</h1>
+  <div class="actions">
+    <a href="{{ url_for('campaigns.campaigns_home') }}" class="btn btn-ghost">← All Campaigns</a>
+  </div>
+</div>
+
+<div class="campaign-layout">
+  <aside class="steps">
+    <h2>Campaign Steps</h2>
+    <ol>
+      {% for s in steps %}
+      {% set link = url_for('campaigns.editor_page', cid=meta.id) if s in ['Create Video Script','Record Template Video'] else (url_for('campaigns.import_page', cid=meta.id) if s=='Import Leads' else (url_for('campaigns.analytics_page', cid=meta.id) if s=='Analytics' else '#')) %}
+      <li class="{{ 'active' if loop.first }}">
+        <a href="{{ link }}">
+          <span class="check {{ meta.steps.get(s) in ['Done'] and 'done' or '' }}"></span>
+          <span class="label">{{ s }}</span>
+          <span class="status">{{ meta.steps.get(s,'Not started') }}</span>
+        </a>
+      </li>
+      {% endfor %}
+    </ol>
+  </aside>
+
+  <section class="content">
+    <div class="stats">
+      <div class="stat">
+        <h3>{{ meta.lead_count }}</h3>
+        <p>Leads imported</p>
+      </div>
+      <div class="stat">
+        <h3>{{ meta.counts.rendered }}</h3>
+        <p>Videos rendered</p>
+      </div>
+      <div class="stat">
+        <h3>{{ meta.counts.queued + meta.counts.processing }}</h3>
+        <p>In progress</p>
+      </div>
+      <div class="stat">
+        <h3>{{ meta.counts.failed }}</h3>
+        <p>Failed</p>
+      </div>
+    </div>
+
+    <div class="actions-grid">
+      <a href="{{ url_for('campaigns.editor_page', cid=meta.id) }}" class="action-card">
+        <h3>Video Editor</h3>
+        <p>Create and edit your video template with timeline editor</p>
+      </a>
+      
+      <a href="{{ url_for('campaigns.import_page', cid=meta.id) }}" class="action-card">
+        <h3>Import Leads</h3>
+        <p>Upload CSV files with lead information</p>
+      </a>
+      
+      <a href="{{ url_for('campaigns.generate_page', cid=meta.id) }}" class="action-card">
+        <h3>Generate Videos</h3>
+        <p>Bulk generate personalized videos for all leads</p>
+      </a>
+      
+      <a href="{{ url_for('campaigns.analytics_page', cid=meta.id) }}" class="action-card">
+        <h3>Analytics</h3>
+        <p>View campaign performance and export results</p>
+      </a>
+    </div>
+  </section>
+</div>
+
+<style>
+.campaign-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.campaign-layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 24px;
+}
+
+.steps {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.steps ol {
+  list-style: none;
+  padding: 0;
+  margin: 16px 0 0;
+}
+
+.steps li {
+  margin-bottom: 8px;
+}
+
+.steps a {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  text-decoration: none;
+  color: var(--text);
+  transition: background-color 0.2s;
+}
+
+.steps a:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.check {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--border);
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.check.done {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+.label {
+  flex: 1;
+  font-weight: 500;
+}
+
+.status {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+}
+
+.stat h3 {
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 0 0 4px;
+  color: var(--primary);
+}
+
+.stat p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.actions-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.action-card {
+  display: block;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  text-decoration: none;
+  color: var(--text);
+  transition: border-color 0.2s, transform 0.2s;
+}
+
+.action-card:hover {
+  border-color: var(--primary);
+  transform: translateY(-2px);
+}
+
+.action-card h3 {
+  margin: 0 0 8px;
+  color: var(--primary);
+}
+
+.action-card p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.4;
+}
+</style>
+{% endblock %}

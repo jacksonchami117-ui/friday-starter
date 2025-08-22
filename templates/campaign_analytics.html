@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Analytics — {{ meta.name }}{% endblock %}
+{% block content %}
+<div class="analytics-header">
+  <h1>Analytics — {{ meta.name }}</h1>
+  <div class="actions">
+    <a class="btn btn-ghost" href="{{ url_for('campaigns.download_progress', cid=meta.id) }}">Download failures.csv / progress</a>
+    <button class="btn btn-primary" id="btn-retry">Retry failed / temporary issues</button>
+  </div>
+</div>
+
+<div class="analytics-layout">
+  <section class="overview">
+    <h2>Campaign Overview</h2>
+    <div class="stats-grid">
+      <div class="stat">
+        <h3>{{ meta.lead_count }}</h3>
+        <p>Total leads</p>
+      </div>
+      <div class="stat">
+        <h3>{{ meta.counts.rendered }}</h3>
+        <p>Videos rendered</p>
+      </div>
+      <div class="stat">
+        <h3>{{ meta.counts.queued + meta.counts.processing }}</h3>
+        <p>In progress</p>
+      </div>
+      <div class="stat">
+        <h3>{{ meta.counts.failed }}</h3>
+        <p>Failed</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="charts">
+    <h2>Performance Metrics</h2>
+    <div class="chart-placeholder">
+      <p>Analytics charts will appear here when data is available</p>
+    </div>
+  </section>
+</div>
+
+<script>
+window.CAMPAIGN_ID="{{ meta.id }}";
+document.getElementById('btn-retry').addEventListener('click', ()=>{
+  fetch('/render/start', {method:'POST'})  // fallback: re-run all; engine may dedupe
+    .then(()=>{ alert('Retry triggered. We\'ll try again shortly.'); location.reload(); })
+    .catch(()=> alert('Could not trigger retry.'));
+});
+</script>
+
+<style>
+.analytics-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.analytics-layout {
+  display: grid;
+  gap: 24px;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.stat {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+}
+
+.stat h3 {
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 0 0 4px;
+  color: var(--accent);
+}
+
+.stat p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.chart-placeholder {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 40px;
+  text-align: center;
+  color: var(--muted);
+}
+</style>
+{% endblock %}

@@ -1,14 +1,98 @@
 {% extends "base.html" %}
+{% block title %}Settings{% endblock %}
 {% block content %}
-<h1>Settings</h1>
-<div class="card">
-  <div class="row">
-    <div>Dark Mode</div>
-    <div><button class="btn" disabled>On</button></div>
+<section class="settings">
+  <h1>Settings</h1>
+  <p class="muted">Providers are configured via environment variables. We never store your secrets.</p>
+
+  <div class="cards-grid">
+    {% for p in providers %}
+    <article class="card">
+      <div class="card-body">
+        <h3>{{ p.name }}</h3>
+        <p>Status: <strong class="{{ 'ok' if p.configured else 'warn' }}">{{ 'Configured' if p.configured else 'Not configured' }}</strong></p>
+        <p class="muted">Requires: {{ p.env }}</p>
+      </div>
+      {% if p.name.startswith('SendGrid') %}
+      <form class="card-footer" method="post" action="/settings/test/email" onsubmit="return testSend(this)">
+        <input type="email" name="to" placeholder="test@example.com" required>
+        <button class="btn btn-primary">Send test email</button>
+      </form>
+      {% elif p.name.startswith('Twilio') %}
+      <form class="card-footer" method="post" action="/settings/test/sms" onsubmit="return testSend(this)">
+        <input type="tel" name="to" placeholder="+15555551212" required>
+        <button class="btn btn-primary">Send test SMS</button>
+      </form>
+      {% elif p.name == "Slack Webhook" %}
+      <div class="card-footer">
+        <button class="btn btn-primary" onclick="testSlack(this)">Test Slack</button>
+      </div>
+      {% elif p.name == "Custom Webhook" %}
+      <div class="card-footer">
+        <button class="btn btn-primary" onclick="testWebhook(this)">Test Webhook</button>
+      </div>
+      {% endif %}
+    </article>
+    {% endfor %}
   </div>
-  <div class="row">
-    <div>Notifications</div>
-    <div><button class="btn" disabled>Enabled</button></div>
-  </div>
-</div>
+</section>
+<script>
+function testSend(form){
+  const fd = new FormData(form);
+  fetch(form.action,{method:'POST',body:fd}).then(r=>r.json()).then(d=>{
+    alert(d.ok ? 'Sent!' : ('Failed: ' + (d.error||'unknown')));
+  });
+  return false;
+}
+
+function testSlack(btn) {
+  const original = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Testing...';
+  
+  fetch('/settings/test/slack', {method:'POST'})
+    .then(r => r.json())
+    .then(d => {
+      btn.textContent = d.ok ? 'Success!' : 'Failed';
+      if (!d.ok) console.error('Slack test error:', d.error);
+      setTimeout(() => {
+        btn.textContent = original;
+        btn.disabled = false;
+      }, 3000);
+    })
+    .catch(e => {
+      btn.textContent = 'Error';
+      console.error('Slack test error:', e);
+      setTimeout(() => {
+        btn.textContent = original;
+        btn.disabled = false;
+      }, 3000);
+    });
+}
+
+function testWebhook(btn) {
+  const original = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Testing...';
+  
+  fetch('/settings/test/webhook', {method:'POST'})
+    .then(r => r.json())
+    .then(d => {
+      btn.textContent = d.ok ? 'Success!' : 'Failed';
+      if (!d.ok) console.error('Webhook test error:', d.error);
+      setTimeout(() => {
+        btn.textContent = original;
+        btn.disabled = false;
+      }, 3000);
+    })
+    .catch(e => {
+      btn.textContent = 'Error';
+      console.error('Webhook test error:', e);
+      setTimeout(() => {
+        btn.textContent = original;
+        btn.disabled = false;
+      }, 3000);
+    });
+}
+</script>
 {% endblock %}

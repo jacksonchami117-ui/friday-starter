@@ -1,0 +1,26 @@
+.editor-layout{display:grid;grid-template-columns:300px 1fr;gap:16px}
+.library{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:12px;max-height:calc(100vh - 180px);overflow:auto}
+.asset-list{list-style:none;padding:0;margin:12px 0;display:grid;grid-template-columns:1fr;gap:8px}
+.asset-item{display:flex;gap:8px;align-items:center;border:1px solid var(--border);border-radius:8px;padding:8px;background:#14161f;cursor:grab}
+.asset-item img{width:56px;height:36px;object-fit:cover;border-radius:6px}
+.asset-item .meta{display:flex;flex-direction:column}
+.asset-item .name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px}
+.workspace .preview{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:12px}
+.preview-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.stage{position:relative;background:#0d0f15;border-radius:8px;display:flex;align-items:center;justify-content:center;min-height:280px}
+.stage video{max-width:100%;border-radius:8px}
+.overlay-layer{position:absolute;inset:0;pointer-events:none}
+.overlay-box{position:absolute;padding:4px 6px;background:rgba(0,0,0,.6);color:#fff;border-radius:6px;pointer-events:auto;cursor:text}
+.overlay-box[contenteditable="true"]{outline:2px solid var(--primary)}
+.timeline{margin-top:12px;background:#0f1118;border:1px solid var(--border);border-radius:12px;padding:8px}
+.track-label{color:var(--muted);font-size:.85rem;margin:6px 0}
+.track{position:relative;min-height:56px;border:1px dashed #2a2d3a;border-radius:10px;padding:6px;background:#131522;overflow-x:auto;white-space:nowrap}
+.segment{display:inline-block;position:absolute;height:36px;background:#2a2f48;color:#fff;border:1px solid #3a3f5f;border-radius:8px;padding:6px 28px 6px 8px;cursor:grab}
+.segment .name{font-size:.85rem}
+.segment .handle{position:absolute;top:0;width:10px;height:100%;cursor:ew-resize;background:linear-gradient(90deg,rgba(255,255,255,.15),transparent)}
+.segment .handle.left{left:0;border-top-left-radius:8px;border-bottom-left-radius:8px}
+.segment .handle.right{right:0;border-top-right-radius:8px;border-bottom-right-radius:8px}
+.segment.selected{outline:2px solid var(--primary)}
+.overlays .segment{background:#39446b}
+.dropzone{border:2px dashed var(--border);background:var(--panel);border-radius:12px;padding:16px;text-align:center;margin-top:8px}
+.dropzone.drag{border-color:var(--primary)}

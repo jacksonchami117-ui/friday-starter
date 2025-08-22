@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Editor — {{ meta.name }}{% endblock %}
+{% block content %}
+<div class="editor-layout">
+  <aside class="library">
+    <header>
+      <h2>Assets</h2>
+      <div class="muted">Drop video/image files here</div>
+    </header>
+    <div id="asset-drop" class="dropzone" tabindex="0" role="button" aria-label="Upload assets">
+      <div class="dz-inner">
+        <div class="dz-icon">⬆</div>
+        <div class="dz-title">Drag files here or click to browse</div>
+        <div class="dz-sub">MP4, MOV, WEBM, PNG, JPG</div>
+      </div>
+      <input id="asset-file" type="file" multiple accept=".mp4,.mov,.m4v,.webm,.png,.jpg,.jpeg,.gif" hidden />
+    </div>
+    <ul id="asset-list" class="asset-list" aria-label="Asset list"></ul>
+  </aside>
+
+  <section class="workspace">
+    <div class="preview">
+      <div class="preview-head">
+        <h2>Preview</h2>
+        <div class="actions">
+          <label>Zoom <input id="zoom" type="range" min="1" max="5" step="0.5" value="1"></label>
+          <button id="btn-add-text" class="btn btn-ghost">Add text overlay</button>
+          <button id="btn-save" class="btn btn-primary">Save</button>
+        </div>
+      </div>
+      <div class="stage">
+        <video id="stage-video" controls></video>
+        <div id="overlay-layer" class="overlay-layer" aria-live="polite"></div>
+      </div>
+    </div>
+
+    <div class="timeline" id="timeline" aria-label="Timeline editor">
+      <div class="track-label">Video</div>
+      <div class="track" id="track-video"></div>
+      <div class="track-label">Text Overlays</div>
+      <div class="track overlays" id="track-overlays"></div>
+    </div>
+  </section>
+</div>
+<script>window.CAMPAIGN_ID="{{ meta.id }}";</script>
+<script src="/static/js/status_text.js"></script>
+<script src="/static/js/pl_editor.js"></script>
+<link rel="stylesheet" href="/static/css/pl_editor.css">
+{% endblock %}

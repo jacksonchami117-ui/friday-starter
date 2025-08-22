@@ -9,26 +9,15 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body class="theme-dark">
-  <aside class="nav-rail" aria-label="Primary">
-    <div class="brand">FRIDAY</div>
-    <nav>
-      <a href="{{ url_for('index') }}" class="{{ 'active' if request.endpoint == 'index' else '' }}">Dashboard</a>
-      <a href="{{ url_for('campaigns.campaigns_home') }}" class="{{ 'active' if request.path.startswith('/campaigns') else '' }}">Campaigns</a>
-      <a href="/editor" class="{{ 'active' if request.path.startswith('/editor') else '' }}">Editor</a>
-      <a href="/render" class="{{ 'active' if request.path.startswith('/render') else '' }}">Render</a>
-      <a href="/diagnostics" class="{{ 'active' if request.path.startswith('/diagnostics') else '' }}">Diagnostics</a>
-      <a href="{{ url_for('settings.settings_home') }}" class="{{ 'active' if request.path.startswith('/settings') else '' }}">Settings</a>
-    </nav>
-    
-    {% if current_user and current_user.is_authenticated %}
-    <div class="user-info">
-      <div class="user-email">{{ current_user.email }}</div>
-      <a href="{{ url_for('accounts.logout') }}" class="logout-link">Logout</a>
-    </div>
-    {% endif %}
-    
-    <div class="copyright">© 2025 FRIDAY</div>
-  </aside>
+  <nav class="navbar">
+    <a href="/home">🏠 Home</a>
+    <a href="/editor/">🎬 Editor</a>
+    <a href="/render/">🎥 Render</a>
+    <a href="/analytics/">📊 Analytics</a>
+    <a href="/leads/">📂 Leads</a>
+    <a href="/settings/">⚙️ Settings</a>
+    <a href="/diagnostics/">🩺 Diagnostics</a>
+  </nav>
   <main class="content" role="main">
     {% block content %}{% endblock %}
   </main>

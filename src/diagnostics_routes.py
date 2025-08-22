@@ -8,12 +8,8 @@ def _data_dir():
     base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     return os.getenv("DATA_DIR", os.path.join(base, "state"))
 
-@diagnostics_bp.route("/", methods=["GET"])
-def index():
-    return diag_home()
-
-@diagnostics_bp.route("/", methods=["GET"])
-def diag_home():
+@diagnostics_bp.route("/", methods=["GET"], endpoint="dashboard")
+def dashboard():
     d = _data_dir()
     log_path = os.path.join(d, "logs", "app.log")
     accepted = os.path.join(d, "accepted_leads.csv")
@@ -41,6 +37,4 @@ def diag_home():
     if os.path.exists(outputs):
         counts["outputs"] = len([n for n in os.listdir(outputs) if os.path.isfile(os.path.join(outputs, n))])
 
-    return render_template("diagnostics.html",
-                           log_tail=tail(log_path, 80),
-                           counts=counts)
+    return render_template("diagnostics.html", log_tail=tail(log_path, 80), counts=counts)

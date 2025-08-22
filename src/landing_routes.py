@@ -1,3 +1,8 @@
+from flask import Blueprint, render_template, abort, send_file, jsonify
+import hashlib
+import os
+import csv
+from .campaigns_routes import _progress_path
 
 bp = Blueprint("landing", __name__, url_prefix="/s")
 
@@ -100,10 +105,7 @@ def info(token: str):
         "has_video": bool(video.get("video_path") and os.path.exists(video.get("video_path", ""))),
         "has_thumbnail": bool(video.get("thumbnail_path") and os.path.exists(video.get("thumbnail_path", "")))
     })
-from flask import Blueprint,render_template,abort
-import hashlib,os,csv
-from .campaigns_routes import _progress_path
-bp=Blueprint("landing",__name__)
+
 def tok(email): return hashlib.sha1((email or "").encode()).hexdigest()[:16]
 @bp.route("/v/<cid>/<token>")
 def view(cid,token):

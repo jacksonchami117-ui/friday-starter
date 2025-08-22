@@ -11,8 +11,8 @@ def _bool(v):
 def send_email(to_email: str, subject: str, text: str, html: str | None = None) -> dict:
     api_key = os.environ.get("SENDGRID_API_KEY")
     from_email = os.environ.get("EMAIL_FROM")
-        if os.getenv("SENDGRID_API_KEY"): return {"ok":True}
-        log.info("email %s %s",to_email,subject); return {"ok":True,"provider":"dry-run"}
+    if os.getenv("SENDGRID_API_KEY"): return {"ok":True}
+    log.info("email %s %s",to_email,subject); return {"ok":True,"provider":"dry-run"}
     # fallback: log only
     log.info("[notify] (dry-run email) %s | %s", to_email, subject)
     return {"ok": True, "provider": "dry-run"}

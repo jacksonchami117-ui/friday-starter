@@ -5,6 +5,6 @@
   <h1>500 — Something went wrong</h1>
   {% if message %}<p><b>Detail:</b> {{ message }}</p>{% endif %}
   <p>Check <code>/diagnostics/</code> for logs, or <code>/__debug/templates</code> and <code>/__debug/static</code>.</p>
-  <a href="{{ url_for('dashboard') }}">← Back to Dashboard</a>
+  <a href="{{ url_for('home') }}">← Back to Dashboard</a>
 </body>
 </html>

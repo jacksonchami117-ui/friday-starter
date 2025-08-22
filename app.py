@@ -100,6 +100,13 @@ def create_app():
     except Exception as e:
         print("[WARN] campaigns blueprint not loaded:", e)
 
+    # --- Analytics blueprint
+    try:
+        from src.analytics_routes import analytics_bp
+        app.register_blueprint(analytics_bp)
+    except Exception as e:
+        print("[WARN] analytics blueprint not loaded:", e)
+
     # Register blueprints
     app.register_blueprint(leads_bp)
     app.register_blueprint(orders_bp)
@@ -131,12 +138,12 @@ def create_app():
         if SAFE_MODE:
             return "FRIDAY safe-mode: up. Visit /home or /health."
         try:
-            return render_template("intro_boot.html")
+            return render_template("dashboard.html")
         except Exception as e:
             return f"Error rendering template: {str(e)}", 500
 
-    @app.route("/home", endpoint="dashboard")
-    def dashboard():
+    @app.route("/home")
+    def home():
         return render_template("dashboard.html")
 
     @app.route("/__debug/static")

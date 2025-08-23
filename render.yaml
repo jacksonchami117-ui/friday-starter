@@ -9,8 +9,9 @@ services:
       apt-get update && apt-get install -y ffmpeg
       mkdir -p logs
       ls -la static || true
-      # Run self-test after build
-      flask diagnostics-selftest
+  # Run preflight checks before self-test
+  python scripts/preflight.py
+  flask diagnostics-selftest
     startCommand: gunicorn app:app
     envVars:
       - key: ADMIN_PASSWORD

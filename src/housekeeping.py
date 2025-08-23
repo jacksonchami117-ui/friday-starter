@@ -20,3 +20,15 @@ def start_housekeeping_thread():
                         os.remove(path)
             time.sleep(86400)
     threading.Thread(target=run, daemon=True).start()
+
+CLEAN_DAYS=int(os.getenv("CLEAN_DAYS","3"))
+def cleanup_outputs():
+    now=time.time()
+    cutoff=CLEAN_DAYS*86400
+    outdir="state/outputs/videos"
+    if not os.path.exists(outdir): return
+    for f in os.listdir(outdir):
+        path=os.path.join(outdir,f)
+        if os.path.isfile(path) and now-os.path.getmtime(path)>cutoff:
+            os.remove(path)
+cleanup_outputs()

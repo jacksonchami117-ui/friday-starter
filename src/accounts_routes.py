@@ -14,7 +14,7 @@ class AccountError(Exception):
 @bp.route("/login", methods=["GET","POST"])
 def login():
     if current_user.is_authenticated:
-        return redirect(url_for("index"))
+        return redirect(url_for("home"))
     
     if request.method == "POST":
         email = request.form.get("email","").strip()
@@ -29,7 +29,7 @@ def login():
             next_url = request.args.get("next")
             if next_url:
                 return redirect(next_url)
-            return redirect(url_for("index"))
+            return redirect(url_for("home"))
         else:
             flash("Invalid credentials", "error")
     
@@ -38,7 +38,7 @@ def login():
 @bp.route("/register", methods=["GET","POST"])
 def register():
     if current_user.is_authenticated:
-        return redirect(url_for("index"))
+        return redirect(url_for("home"))
     
     # Registration disabled by default
     if not os.environ.get("ENABLE_REGISTRATION"):

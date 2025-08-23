@@ -1,0 +1,10 @@
+# .dockerignore
+.git
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+node_modules/
+.env
+state/

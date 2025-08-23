@@ -121,6 +121,69 @@ def create_app():
     app.register_blueprint(diagnostics_bp)
     app.register_blueprint(editor_bp)
 
+    # -------------------------------------------------
+    # Central Logging & Error Tracking (Sentry-ready)
+    # -------------------------------------------------
+    import logging
+    from logging.handlers import RotatingFileHandler
+    import os
+
+    LOG_DIR = os.environ.get("LOG_DIR", "./logs")
+    os.makedirs(LOG_DIR, exist_ok=True)
+
+    file_handler = RotatingFileHandler(
+        os.path.join(LOG_DIR, "friday.log"),
+        maxBytes=10 * 1024 * 1024,  # 10 MB
+        backupCount=5,
+    )
+    file_handler.setLevel(logging.INFO)
+    file_handler.setFormatter(logging.Formatter(
+        "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+    ))
+
+    if not app.logger.handlers:
+        app.logger.addHandler(file_handler)
+        app.logger.setLevel(logging.INFO)
+
+    # Optional: Sentry
+    if os.environ.get("SENTRY_DSN"):
+        import sentry_sdk
+        from sentry_sdk.integrations.flask import FlaskIntegration
+        sentry_sdk.init(
+            dsn=os.environ["SENTRY_DSN"],
+            integrations=[FlaskIntegration()],
+            traces_sample_rate=1.0,
+        )
+        app.logger.info("Sentry initialized")
+
+    # -------------------------------------------------
+    # Diagnostics CLI Command
+    # -------------------------------------------------
+    import click
+    from flask.cli import with_appcontext, current_app
+
+    @click.command("diagnostics-selftest")
+    @with_appcontext
+    def diagnostics_selftest():
+        """Run self-test hitting critical endpoints"""
+        client = current_app.test_client()
+        endpoints = ["/health", "/", "/leads", "/editor", "/render", "/exports", "/diagnostics"]
+        failures = []
+        for ep in endpoints:
+            resp = client.get(ep)
+            if resp.status_code not in (200, 302):
+                failures.append((ep, resp.status_code))
+        if failures:
+            click.echo(f"❌ Failures: {failures}")
+            raise SystemExit(1)
+        click.echo("✅ Diagnostics self-test passed")
+
+    def register_cli(app):
+        app.cli.add_command(diagnostics_selftest)
+
+    # register CLI commands
+    register_cli(app)
+
     # Safety: global error handler
     @app.errorhandler(Exception)
     def _err(e):
@@ -163,41 +226,6 @@ def create_app():
                 rows.append(os.path.relpath(os.path.join(root, name), sdir))
         rows.sort()
         return "<pre>" + "\n".join(rows) + "</pre>"
-
-    # -------------------------------------------------
-    # Central Logging & Error Tracking (Sentry-ready)
-    # -------------------------------------------------
-    import logging
-    from logging.handlers import RotatingFileHandler
-    import os
-
-    LOG_DIR = os.environ.get("LOG_DIR", "./logs")
-    os.makedirs(LOG_DIR, exist_ok=True)
-
-    file_handler = RotatingFileHandler(
-        os.path.join(LOG_DIR, "friday.log"),
-        maxBytes=10 * 1024 * 1024,  # 10 MB
-        backupCount=5,
-    )
-    file_handler.setLevel(logging.INFO)
-    file_handler.setFormatter(logging.Formatter(
-        "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
-    ))
-
-    if not app.logger.handlers:
-        app.logger.addHandler(file_handler)
-        app.logger.setLevel(logging.INFO)
-
-    # Optional: Sentry
-    if os.environ.get("SENTRY_DSN"):
-        import sentry_sdk
-        from sentry_sdk.integrations.flask import FlaskIntegration
-        sentry_sdk.init(
-            dsn=os.environ["SENTRY_DSN"],
-            integrations=[FlaskIntegration()],
-            traces_sample_rate=1.0,
-        )
-        app.logger.info("Sentry initialized")
 
     return app
 

@@ -4,12 +4,13 @@ services:
     env: python
     buildCommand: |
       pip install --upgrade pip --break-system-packages
-      pip install -r requirements.txt
+      pip install -r requirements.lock --no-cache-dir
       git lfs install
       apt-get update && apt-get install -y ffmpeg
-      # force static/logging dirs
       mkdir -p logs
       ls -la static || true
+      # Run self-test after build
+      flask diagnostics-selftest
     startCommand: gunicorn app:app
     envVars:
       - key: ADMIN_PASSWORD
@@ -24,12 +25,13 @@ services:
         env: python
         buildCommand: |
           pip install --upgrade pip --break-system-packages
-          pip install -r requirements.txt
+          pip install -r requirements.lock --no-cache-dir
           git lfs install
           apt-get update && apt-get install -y ffmpeg
-          # force static/logging dirs
           mkdir -p logs
           ls -la static || true
+          # Run self-test after build
+          flask diagnostics-selftest
         startCommand: gunicorn app:app
         envVars:
           - key: ADMIN_PASSWORD

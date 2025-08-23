@@ -73,3 +73,12 @@ jobs:
             server.log
             state/logs/**
           if-no-files-found: warn
+
+      - name: Verify lockfile consistency
+        run: |
+          pip install pip-tools
+          pip-compile --quiet --generate-hashes --output-file requirements.lock requirements.txt
+          git diff --exit-code requirements.lock || (echo "❌ requirements.lock drift" && exit 1)
+
+      - name: Run diagnostics self-test
+        run: flask diagnostics-selftest

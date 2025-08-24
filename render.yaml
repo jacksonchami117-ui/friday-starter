@@ -3,27 +3,23 @@ services:
     name: friday-starter
     env: python
     buildCommand: |
-  pip install --upgrade pip --break-system-packages
-  export PIP_ONLY_BINARY=:all:
-  pip install -r requirements.lock --no-cache-dir
-      git lfs install
-      apt-get update && apt-get install -y ffmpeg
+      pip install --upgrade pip --break-system-packages
+      export PIP_ONLY_BINARY=:all:
+      pip install -r requirements.txt --no-cache-dir
       mkdir -p logs
       ls -la static || true
-  # Run preflight checks before self-test
-  python scripts/preflight.py
-  flask diagnostics-selftest
-    startCommand: gunicorn app:app
+      python -m py_compile app.py
+      flask diagnostics-selftest
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
     envVars:
+      - key: SECRET_KEY
+        generateValue: true
       - key: ADMIN_PASSWORD
         sync: false
       - key: STATE_DIR
         value: /data/state
       - key: USE_DB
         value: "1"
-  # Removed duplicate service blocks for clarity
-          - key: USE_DB
-            value: "1"
-        disk:
-          name: data
-          mountPath: /data
+    disk:
+      name: data
+      mountPath: /data

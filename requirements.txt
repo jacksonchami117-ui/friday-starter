@@ -1,12 +1,15 @@
 
-pypdf==4.3.1
+pypdf==3.17.4
+setuptools>=65.0.0
+setuptools==65.5.1
+wheel>=0.37.0
 setuptools>=65.0.0
 wheel>=0.37.0
 Flask==2.3.2
 Flask-Login==0.6.3
 gunicorn==21.2.0
 numpy==1.26.4
-pandas==2.0.3
+pandas==2.2.3
 openpyxl==3.1.2
 redis==5.0.1
 prometheus-client==0.17.1

@@ -53,33 +53,30 @@ def register_cli(app):
 # App Factory
 # -------------------------------------------------
 def create_app():
-    # Explicitly fetch os from global scope
-    _os = __import__("os")
-
     app = Flask(__name__)
-    app.secret_key = _os.getenv("SECRET_KEY", "dev-secret-key")
+    app.secret_key = os.getenv("SECRET_KEY", "dev-secret-key")
 
     if not app.logger.handlers:
         app.logger.addHandler(file_handler)
         app.logger.setLevel(logging.INFO)
 
     # Optional Sentry
-    if _os.environ.get("SENTRY_DSN"):
+    if os.environ.get("SENTRY_DSN"):
         import sentry_sdk
         from sentry_sdk.integrations.flask import FlaskIntegration
         sentry_sdk.init(
-            dsn=_os.environ["SENTRY_DSN"],
+            dsn=os.environ["SENTRY_DSN"],
             integrations=[FlaskIntegration()],
             traces_sample_rate=1.0,
         )
         app.logger.info("Sentry initialized")
 
     # Ensure state dirs
-    base_dir = _os.path.dirname(_os.path.abspath(__file__))
-    data_dir = _os.getenv("DATA_DIR", _os.path.join(base_dir, "state"))
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    data_dir = os.getenv("DATA_DIR", os.path.join(base_dir, "state"))
     app.config["DATA_DIR"] = data_dir
     for path in ["uploads", "outputs/videos", "outputs/thumbs", "logs", "batches", "assets", "templates"]:
-        _os.makedirs(_os.path.join(data_dir, path), exist_ok=True)
+        os.makedirs(os.path.join(data_dir, path), exist_ok=True)
 
     # Blueprints
     app.register_blueprint(leads_bp)
@@ -103,11 +100,11 @@ def create_app():
 
     @app.route("/media/assets/<path:filename>")
     def media_assets(filename):
-        return send_from_directory(_os.path.join(data_dir, "assets"), filename)
+        return send_from_directory(os.path.join(data_dir, "assets"), filename)
 
     @app.route("/media/thumbs/<path:filename>")
     def media_thumbs(filename):
-        return send_from_directory(_os.path.join(data_dir, "outputs", "thumbs"), filename)
+        return send_from_directory(os.path.join(data_dir, "outputs", "thumbs"), filename)
 
     return app
 

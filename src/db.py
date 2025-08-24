@@ -1,5 +1,5 @@
 from __future__ import annotations
-import os, sqlite3, contextlib
+import os, sqlite3, contextlib, hashlib
 from typing import Optional, Tuple
 from werkzeug.security import generate_password_hash, check_password_hash
 

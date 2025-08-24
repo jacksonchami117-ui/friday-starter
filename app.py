@@ -5,6 +5,15 @@ from logging.handlers import RotatingFileHandler
 import click
 from flask import Flask, render_template, send_from_directory, current_app
 from flask.cli import with_appcontext
+import werkzeug
+import importlib.metadata
+
+# Provide backwards-compatible werkzeug.__version__ for Flask test_client
+if not hasattr(werkzeug, "__version__"):
+    try:
+        werkzeug.__version__ = importlib.metadata.version("werkzeug")
+    except importlib.metadata.PackageNotFoundError:  # pragma: no cover
+        werkzeug.__version__ = "0"
 
 from src.leads import leads_bp
 from src.orders import orders_bp
@@ -99,7 +108,7 @@ def create_app():
 
     @app.route("/health")
     def health():
-        return "OK", 200
+        return "ok", 200
 
     @app.route("/media/assets/<path:filename>")
     def media_assets(filename):
@@ -219,7 +228,7 @@ def create_app():
 
     @app.route("/health")
     def health():
-        return "OK", 200
+        return "ok", 200
 
     @app.route("/media/assets/<path:filename>")
     def media_assets(filename):
@@ -362,10 +371,6 @@ def create_app():
     # -------------------------------------------------
     # Central Logging & Error Tracking (Sentry-ready)
     # -------------------------------------------------
-    import logging
-    from logging.handlers import RotatingFileHandler
-    import os
-
     LOG_DIR = os.environ.get("LOG_DIR", "./logs")
     os.makedirs(LOG_DIR, exist_ok=True)
 
@@ -452,6 +457,10 @@ def create_app():
     @app.route("/home")
     def home():
         return render_template("dashboard.html")
+
+    @app.route("/health")
+    def health():
+        return "ok", 200
 
     @app.route("/__debug/static")
     def __debug_static():

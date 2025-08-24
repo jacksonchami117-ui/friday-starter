@@ -10,36 +10,94 @@ from src.render_routes import render_bp
 from src.exports import exports_bp
 from src.diagnostics_routes import diagnostics_bp
 from src.editor import editor_bp
-from src.db import init as db_init, ensure_default_admin
-from src.user import User
-from src.campaigns_routes import campaigns_bp
+
+import os
+import time
+import logging
+from logging.handlers import RotatingFileHandler
+
+import click
+import werkzeug
+import importlib.metadata
+
+from flask import Flask, render_template, send_from_directory, jsonify, current_app
+from flask.cli import with_appcontext
+from flask_login import LoginManager, login_required
+from werkzeug.exceptions import HTTPException
+
+# Provide backwards-compatible werkzeug.__version__ for Flask test_client
+if not hasattr(werkzeug, "__version__"):
+    try:  # pragma: no cover
+        werkzeug.__version__ = importlib.metadata.version("werkzeug")
+    except importlib.metadata.PackageNotFoundError:
+        werkzeug.__version__ = "0"
+
+# Blueprints
+from src.leads import leads_bp
+from src.orders import orders_bp
+from src.render_routes import render_bp
+from src.exports import exports_bp
+from src.diagnostics_routes import diagnostics_bp
+from src.editor import editor_bp
 from src.analytics_routes import analytics_bp
-from src.settings_routes import settings_bp
-try:
-    from src.landing_routes import landing_bp
-except ImportError:
-    landing_bp = None
-from src.housekeeping import start_housekeeping_thread
+
+BUILD_HASH = str(int(time.time()))
+
+
+@click.command("diagnostics-selftest")
+@with_appcontext
+def diagnostics_selftest():
+    """Run self-test hitting critical endpoints"""
+    client = current_app.test_client()
+    endpoints = ["/health", "/", "/leads", "/editor", "/render", "/exports", "/diagnostics"]
+    failures = []
+    for ep in endpoints:
+        resp = client.get(ep)
+        if resp.status_code not in (200, 302):
+            failures.append((ep, resp.status_code))
+    if failures:
+        click.echo(f"❌ Failures: {failures}")
+        raise SystemExit(1)
+    click.echo("✅ Diagnostics self-test passed")
+
+
+def register_cli(app: Flask) -> None:
+    app.cli.add_command(diagnostics_selftest)
+
 
 def create_app():
     app = Flask(__name__)
     app.secret_key = os.getenv("SECRET_KEY", "dev-secret-key")
+    app.config["TEMPLATES_AUTO_RELOAD"] = True
 
-    # Central Logging
-    LOG_DIR = os.getenv("LOG_DIR", "state/logs")
-    os.makedirs(LOG_DIR, exist_ok=True)
-    file_handler = RotatingFileHandler(
-        os.path.join(LOG_DIR, "friday.log"), maxBytes=10*1024*1024, backupCount=5
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    data_dir = os.getenv("DATA_DIR", os.path.join(base_dir, "state"))
+    app.config["DATA_DIR"] = data_dir
+    app.jinja_env.globals.update(BUILD_HASH=BUILD_HASH)
+
+    # Ensure runtime dirs exist
+    for p in [
+        os.path.join(data_dir, "uploads"),
+        os.path.join(data_dir, "outputs", "videos"),
+        os.path.join(data_dir, "outputs", "thumbs"),
+        os.path.join(data_dir, "logs"),
+        os.path.join(data_dir, "batches"),
+        os.path.join(data_dir, "assets"),
+        os.path.join(data_dir, "templates"),
+        os.path.join(data_dir, "exports"),
+    ]:
+        os.makedirs(p, exist_ok=True)
+
+    # Logging
+    log_path = os.path.join(data_dir, "logs", "app.log")
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(message)s",
+        handlers=[logging.FileHandler(log_path), logging.StreamHandler()],
     )
-    file_handler.setLevel(logging.INFO)
-    file_handler.setFormatter(logging.Formatter(
-        "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
-    ))
-    if not app.logger.handlers:
-        app.logger.addHandler(file_handler)
-        app.logger.setLevel(logging.INFO)
+    app.logger.info("=== FRIDAY Startup ===")
 
-    # Sentry integration
+    # Optional: Sentry
     if os.environ.get("SENTRY_DSN"):
         import sentry_sdk
         from sentry_sdk.integrations.flask import FlaskIntegration
@@ -50,25 +108,6 @@ def create_app():
         )
         app.logger.info("Sentry initialized")
 
-    # DB & Auth
-    db_init()
-    ensure_default_admin()
-    login_manager = LoginManager(app)
-    login_manager.login_view = "accounts.login"
-    @login_manager.user_loader
-    def load_user(email):
-        return User.get(email)
-
-    # DATA_DIR reliability
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    data_dir = os.getenv("DATA_DIR", os.path.join(base_dir, "state"))
-    app.config["DATA_DIR"] = data_dir
-    for path in ["uploads", "outputs/videos", "outputs/thumbs", "logs", "batches", "assets", "templates"]:
-        os.makedirs(os.path.join(data_dir, path), exist_ok=True)
-
-    # Housekeeping
-    start_housekeeping_thread()
-
     # Blueprints
     app.register_blueprint(leads_bp)
     app.register_blueprint(orders_bp)
@@ -76,87 +115,56 @@ def create_app():
     app.register_blueprint(exports_bp)
     app.register_blueprint(diagnostics_bp)
     app.register_blueprint(editor_bp)
-    app.register_blueprint(campaigns_bp)
     app.register_blueprint(analytics_bp)
-    app.register_blueprint(settings_bp)
-    if landing_bp:
-        app.register_blueprint(landing_bp)
 
-    # Error Handlers
-    @app.errorhandler(404)
-    def not_found(e):
-        return jsonify({"error": "Not found"}), 404
-    @app.errorhandler(500)
-    def server_error(e):
-        return jsonify({"error": "Server error"}), 500
+    # CLI
+    register_cli(app)
+
+    # Error handlers
     @app.errorhandler(Exception)
     def handle_exception(e):
+        if isinstance(e, HTTPException):
+            return e
+        current_app.logger.exception("Unhandled exception")
         return jsonify({"error": str(e)}), 500
 
-    # Safe Mode
-    @app.route("/safe-mode")
-    def safe_mode():
-        return jsonify({"status": "safe mode active"})
+    @app.errorhandler(404)
+    def _404(e):
+        return render_template("404.html"), 404
 
-    # Health
-    @app.route("/health")
-    def health():
-        return "ok", 200
+    @app.errorhandler(500)
+    def _500(e):
+        return render_template("500.html", message=str(e)), 500
 
-    # Home
+    # Routes
     @app.route("/")
     def index():
         return render_template("index.html")
 
-    # Media routes (secured)
+    @app.route("/health")
+    def health():
+        return "ok", 200
+
     @app.route("/media/assets/<path:filename>")
     @login_required
     def media_assets(filename):
-        asset_path = os.path.join(data_dir, "assets", filename)
-        if not os.path.exists(asset_path):
-            return jsonify({"error": "Asset not found"}), 404
         return send_from_directory(os.path.join(data_dir, "assets"), filename)
 
     @app.route("/media/thumbs/<path:filename>")
     @login_required
     def media_thumbs(filename):
-        thumb_path = os.path.join(data_dir, "outputs", "thumbs", filename)
-        if not os.path.exists(thumb_path):
-            return jsonify({"error": "Thumbnail not found"}), 404
         return send_from_directory(os.path.join(data_dir, "outputs", "thumbs"), filename)
-
-    # Startup self-checks
-    import shutil
-    if not shutil.which("ffmpeg"):
-        app.logger.error("FFmpeg not found in PATH!")
-    if not app.secret_key:
-        app.logger.warning("SECRET_KEY not set, using fallback!")
 
     return app
 
-        import sentry_sdk
-        from sentry_sdk.integrations.flask import FlaskIntegration
-        sentry_sdk.init(
-            dsn=os.environ["SENTRY_DSN"],
-            integrations=[FlaskIntegration()],
-            traces_sample_rate=1.0,
-        )
-        app.logger.info("Sentry initialized")
 
-    # Data directories
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    data_dir = os.getenv("DATA_DIR", os.path.join(base_dir, "state"))
-    app.config["DATA_DIR"] = data_dir
+if __name__ == "__main__":
+    app = create_app()
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
 
-    for path in [
-        "uploads", "outputs/videos", "outputs/thumbs",
-        "logs", "batches", "assets", "templates"
-    ]:
-        os.makedirs(os.path.join(data_dir, path), exist_ok=True)
-
-    # Blueprints
-    app.register_blueprint(leads_bp)
-    app.register_blueprint(orders_bp)
+# Expose for Gunicorn
+app = create_app()
     app.register_blueprint(render_bp)
     app.register_blueprint(exports_bp)
     app.register_blueprint(diagnostics_bp)

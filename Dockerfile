@@ -14,9 +14,11 @@ RUN apt-get update -y && apt-get install -y --no-install-recommends \
 	fonts-dejavu-core \
 	&& rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+
+# Enforce wheel-only installs and use requirements.lock
+ENV PIP_ONLY_BINARY=:all:
+COPY requirements.lock .
+RUN pip install --upgrade pip setuptools wheel && pip install --no-cache-dir -r requirements.lock
 
 # Copy the rest of the app
 COPY . .

@@ -3,8 +3,9 @@ services:
     name: friday-starter
     env: python
     buildCommand: |
-      pip install --upgrade pip --break-system-packages
-      pip install -r requirements.lock --no-cache-dir
+  pip install --upgrade pip --break-system-packages
+  export PIP_ONLY_BINARY=:all:
+  pip install -r requirements.lock --no-cache-dir
       git lfs install
       apt-get update && apt-get install -y ffmpeg
       mkdir -p logs
@@ -20,25 +21,7 @@ services:
         value: /data/state
       - key: USE_DB
         value: "1"
-    services:
-  name: friday-starter
-        name: friday-starter
-        env: python
-        buildCommand: |
-          pip install --upgrade pip --break-system-packages
-          pip install -r requirements.lock --no-cache-dir
-          git lfs install
-          apt-get update && apt-get install -y ffmpeg
-          mkdir -p logs
-          ls -la static || true
-          # Run self-test after build
-          flask diagnostics-selftest
-        startCommand: gunicorn app:app
-        envVars:
-          - key: ADMIN_PASSWORD
-            sync: false
-          - key: STATE_DIR
-            value: /data/state
+  # Removed duplicate service blocks for clarity
           - key: USE_DB
             value: "1"
         disk:

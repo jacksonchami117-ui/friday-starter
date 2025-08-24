@@ -36,7 +36,7 @@ BUILD_HASH = str(int(time.time()))
 def diagnostics_selftest():
     """Run self-test hitting critical endpoints"""
     client = current_app.test_client()
-    endpoints = ["/health", "/", "/leads", "/editor", "/render", "/exports", "/diagnostics"]
+    endpoints = ["/health", "/", "/leads/", "/editor/", "/render/", "/exports/", "/diagnostics/"]
     failures = []
     for ep in endpoints:
         resp = client.get(ep)

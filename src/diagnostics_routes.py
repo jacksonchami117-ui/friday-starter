@@ -10,10 +10,6 @@ def _data_dir():
 
 @diagnostics_bp.route("/", methods=["GET"], endpoint="diagnostics_home")
 def diagnostics_home():
-    return render_template("diagnostics.html")
-
-@diagnostics_bp.route("/", methods=["GET"], endpoint="dashboard")
-def dashboard():
     d = _data_dir()
     log_path = os.path.join(d, "logs", "app.log")
     accepted = os.path.join(d, "accepted_leads.csv")
@@ -42,3 +38,5 @@ def dashboard():
         counts["outputs"] = len([n for n in os.listdir(outputs) if os.path.isfile(os.path.join(outputs, n))])
 
     return render_template("diagnostics.html", log_tail=tail(log_path, 80), counts=counts)
+
+

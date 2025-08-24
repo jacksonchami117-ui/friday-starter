@@ -15,11 +15,13 @@ jobs:
           pytest -q || exit 1
           python scripts/smoke_test.py || exit 1
       - uses: actions/upload-artifact@v3
-        if: always()
         with:
-          name: friday-artifacts
-          path: |
             logs/**
+        name: Deploy FRIDAY to Render
+        on:
+          push:
+            branches: [ main ]
+
             state/outputs/**
             test-data/**
             test-data-summary/**

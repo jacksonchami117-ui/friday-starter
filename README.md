@@ -1,4 +1,7 @@
 # Friday Martial Arts OS
+
+![CI](https://github.com/<OWNER>/<REPO>/actions/workflows/ci.yml/badge.svg)
+![Coverage](./coverage.svg)
 Setup instructions here.
 
 ### Timeline Editor (New)

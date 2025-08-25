@@ -2,29 +2,416 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Upload Leads</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lead Management - FRIDAY</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #00ff88;
+      --primary-dark: #00cc66;
+      --bg: #0a0a0a;
+      --card-bg: #1a1a1a;
+      --text: #ffffff;
+      --text-muted: #888888;
+      --border: #333333;
+      --danger: #ff4444;
+      --warning: #ffaa00;
+      --success: #00ff88;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: linear-gradient(135deg, var(--bg) 0%, #111111 100%);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    .header {
+      background: rgba(0, 0, 0, 0.9);
+      border-bottom: 1px solid var(--border);
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      backdrop-filter: blur(10px);
+    }
+
+    .header h1 {
+      color: var(--primary);
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+
+    .back-btn {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: var(--text-muted);
+      text-decoration: none;
+      padding: 0.5rem 1rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .back-btn:hover {
+      color: var(--primary);
+      border-color: var(--primary);
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    .upload-section {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .upload-section::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--primary), var(--primary-dark));
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .section-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      background: rgba(0, 255, 136, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--primary);
+      font-size: 1.2rem;
+    }
+
+    .file-upload-area {
+      border: 2px dashed var(--border);
+      border-radius: 8px;
+      padding: 3rem 2rem;
+      text-align: center;
+      transition: all 0.3s ease;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .file-upload-area:hover {
+      border-color: var(--primary);
+      background: rgba(0, 255, 136, 0.05);
+    }
+
+    .file-upload-area.dragover {
+      border-color: var(--primary);
+      background: rgba(0, 255, 136, 0.1);
+    }
+
+    .upload-icon {
+      font-size: 3rem;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+    }
+
+    .file-upload-area:hover .upload-icon {
+      color: var(--primary);
+    }
+
+    .upload-text {
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .file-types {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .file-input {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    .upload-btn {
+      background: var(--primary);
+      color: #000000;
+      border: none;
+      padding: 0.75rem 2rem;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 1rem;
+      transition: all 0.2s ease;
+      display: none;
+    }
+
+    .upload-btn:hover {
+      background: var(--primary-dark);
+    }
+
+    .upload-btn.show {
+      display: inline-block;
+    }
+
+    .actions-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .action-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      transition: all 0.3s ease;
+      text-decoration: none;
+      color: inherit;
+      display: block;
+    }
+
+    .action-card:hover {
+      transform: translateY(-2px);
+      border-color: var(--primary);
+      box-shadow: 0 8px 25px rgba(0, 255, 136, 0.15);
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .card-icon {
+      width: 35px;
+      height: 35px;
+      border-radius: 6px;
+      background: rgba(0, 255, 136, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--primary);
+    }
+
+    .messages {
+      margin-bottom: 2rem;
+    }
+
+    .message {
+      padding: 1rem;
+      border-radius: 8px;
+      margin-bottom: 0.5rem;
+      border-left: 4px solid;
+    }
+
+    .message.error {
+      background: rgba(255, 68, 68, 0.1);
+      border-left-color: var(--danger);
+      color: #ffcccc;
+    }
+
+    .message.success {
+      background: rgba(0, 255, 136, 0.1);
+      border-left-color: var(--success);
+      color: #ccffdd;
+    }
+
+    .message.info {
+      background: rgba(0, 170, 255, 0.1);
+      border-left-color: #00aaff;
+      color: #cceeff;
+    }
+
+    .selected-file {
+      background: rgba(0, 255, 136, 0.1);
+      border: 1px solid var(--primary);
+      border-radius: 8px;
+      padding: 1rem;
+      margin: 1rem 0;
+      display: none;
+    }
+
+    .selected-file.show {
+      display: block;
+    }
+
+    .file-info {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .file-name {
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    .file-size {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+  </style>
 </head>
 <body>
-  <h1>Upload Leads CSV/XLSX</h1>
+  <div class="header">
+    <h1><i class="fas fa-users"></i> Lead Management</h1>
+    <a href="{{ url_for('dashboard') }}" class="back-btn">
+      <i class="fas fa-arrow-left"></i>
+      Control Center
+    </a>
+  </div>
 
-  {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-      <ul>
-        {% for category, message in messages %}
-          <li><strong>{{ category|upper }}:</strong> {{ message }}</li>
-        {% endfor %}
-      </ul>
-    {% endif %}
-  {% endwith %}
+  <div class="container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="messages">
+          {% for category, message in messages %}
+            <div class="message {{ 'error' if category == 'error' else 'success' if category == 'success' else 'info' }}">
+              <i class="fas fa-{{ 'exclamation-triangle' if category == 'error' else 'check-circle' if category == 'success' else 'info-circle' }}"></i>
+              {{ message }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
 
-  <form action="{{ url_for('leads.upload_leads') }}" method="post" enctype="multipart/form-data">
-    <input type="file" name="file" accept=".csv,.xlsx" required>
-    <button type="submit">Upload</button>
-  </form>
+    <div class="upload-section">
+      <div class="section-header">
+        <div class="section-icon">
+          <i class="fas fa-cloud-upload-alt"></i>
+        </div>
+        <div>
+          <h2>Upload Lead Data</h2>
+          <p style="color: var(--text-muted); margin: 0;">Import CSV or Excel files containing your lead information</p>
+        </div>
+      </div>
 
-  <br>
-  <a href="{{ url_for('leads.list_leads') }}">📋 View Uploaded Leads</a> |
-  <a href="{{ url_for('leads.list_rejected') }}">🚫 View Rejected</a> |
-  <a href="{{ url_for('dashboard') }}">← Back to Dashboard</a>
+      <form action="{{ url_for('leads.upload_leads') }}" method="post" enctype="multipart/form-data" id="upload-form">
+        <div class="file-upload-area" id="upload-area">
+          <div class="upload-icon">
+            <i class="fas fa-file-upload"></i>
+          </div>
+          <div class="upload-text">
+            <strong>Click to browse</strong> or drag and drop your file here
+          </div>
+          <div class="file-types">
+            Supported formats: CSV, XLSX (max 10MB)
+          </div>
+          <input type="file" name="file" accept=".csv,.xlsx" required class="file-input" id="file-input">
+        </div>
+        
+        <div class="selected-file" id="selected-file">
+          <div class="file-info">
+            <i class="fas fa-file-alt" style="color: var(--primary);"></i>
+            <div>
+              <div class="file-name" id="file-name"></div>
+              <div class="file-size" id="file-size"></div>
+            </div>
+          </div>
+        </div>
+
+        <button type="submit" class="upload-btn" id="upload-btn">
+          <i class="fas fa-upload"></i>
+          Process Leads
+        </button>
+      </form>
+    </div>
+
+    <div class="actions-grid">
+      <a href="{{ url_for('leads.list_leads') }}" class="action-card">
+        <div class="card-header">
+          <div class="card-icon">
+            <i class="fas fa-list"></i>
+          </div>
+          <h3>View Uploaded Leads</h3>
+        </div>
+        <p style="color: var(--text-muted);">Browse and manage all successfully processed leads</p>
+      </a>
+
+      <a href="{{ url_for('leads.list_rejected') }}" class="action-card">
+        <div class="card-header">
+          <div class="card-icon">
+            <i class="fas fa-exclamation-triangle"></i>
+          </div>
+          <h3>View Rejected</h3>
+        </div>
+        <p style="color: var(--text-muted);">Review leads that failed validation or processing</p>
+      </a>
+    </div>
+  </div>
+
+  <script>
+    const uploadArea = document.getElementById('upload-area');
+    const fileInput = document.getElementById('file-input');
+    const selectedFile = document.getElementById('selected-file');
+    const uploadBtn = document.getElementById('upload-btn');
+    const fileName = document.getElementById('file-name');
+    const fileSize = document.getElementById('file-size');
+
+    // Drag and drop functionality
+    uploadArea.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadArea.classList.add('dragover');
+    });
+
+    uploadArea.addEventListener('dragleave', () => {
+      uploadArea.classList.remove('dragover');
+    });
+
+    uploadArea.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadArea.classList.remove('dragover');
+      const files = e.dataTransfer.files;
+      if (files.length > 0) {
+        fileInput.files = files;
+        showSelectedFile(files[0]);
+      }
+    });
+
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files.length > 0) {
+        showSelectedFile(e.target.files[0]);
+      }
+    });
+
+    function showSelectedFile(file) {
+      fileName.textContent = file.name;
+      fileSize.textContent = formatFileSize(file.size);
+      selectedFile.classList.add('show');
+      uploadBtn.classList.add('show');
+    }
+
+    function formatFileSize(bytes) {
+      if (bytes === 0) return '0 Bytes';
+      const k = 1024;
+      const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+  </script>
 </body>
 </html>

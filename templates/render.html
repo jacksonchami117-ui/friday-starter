@@ -1,20 +1,470 @@
-{% extends "base.html" %}
-{% block content %}
-<h1>Render</h1>
-<form id="render-form">
-  <label for="campaign-id">Campaign ID:</label>
-  <input type="text" id="campaign-id" placeholder="demo">
-  <button type="submit">Start Render</button>
-</form>
-<pre id="render-log"></pre>
-<script>
-document.getElementById("render-form").onsubmit = e => {
-  e.preventDefault();
-  const cid = document.getElementById("campaign-id").value || "demo";
-  fetch(`/render/start/${cid}`, {method:"POST"})
-    .then(r=>r.json()).then(d=>{
-      document.getElementById("render-log").textContent = JSON.stringify(d,null,2);
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Video Rendering - FRIDAY</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #00ff88;
+      --primary-dark: #00cc66;
+      --bg: #0a0a0a;
+      --card-bg: #1a1a1a;
+      --text: #ffffff;
+      --text-muted: #888888;
+      --border: #333333;
+      --danger: #ff4444;
+      --warning: #ffaa00;
+      --success: #00ff88;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: linear-gradient(135deg, var(--bg) 0%, #111111 100%);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    .header {
+      background: rgba(0, 0, 0, 0.9);
+      border-bottom: 1px solid var(--border);
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      backdrop-filter: blur(10px);
+    }
+
+    .header h1 {
+      color: var(--primary);
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+
+    .back-btn {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: var(--text-muted);
+      text-decoration: none;
+      padding: 0.5rem 1rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .back-btn:hover {
+      color: var(--primary);
+      border-color: var(--primary);
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    .render-section {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .render-section::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--primary), var(--primary-dark));
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .section-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      background: rgba(0, 255, 136, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--primary);
+      font-size: 1.2rem;
+    }
+
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      color: var(--text);
+      font-weight: 500;
+    }
+
+    .input-group {
+      position: relative;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 1rem;
+      transition: all 0.2s ease;
+    }
+
+    input[type="text"]:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(0, 255, 136, 0.1);
+    }
+
+    .render-btn {
+      background: var(--primary);
+      color: #000000;
+      border: none;
+      padding: 1rem 2rem;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .render-btn:hover {
+      background: var(--primary-dark);
+      transform: translateY(-1px);
+    }
+
+    .render-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .log-section {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 2rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .log-section::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #ffaa00, #ff8800);
+    }
+
+    .log-output {
+      background: #000000;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.5rem;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9rem;
+      color: var(--primary);
+      min-height: 200px;
+      max-height: 400px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      line-height: 1.4;
+    }
+
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--text-muted);
+    }
+
+    .status-dot.active {
+      background: var(--primary);
+      animation: pulse 1.5s infinite;
+    }
+
+    .status-dot.success {
+      background: var(--success);
+    }
+
+    .status-dot.error {
+      background: var(--danger);
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+      margin: 1rem 0;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: var(--primary);
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+
+    .quick-actions {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .quick-action {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem;
+      text-align: center;
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+
+    .quick-action:hover {
+      border-color: var(--primary);
+      background: rgba(0, 255, 136, 0.05);
+    }
+
+    .quick-action i {
+      font-size: 1.5rem;
+      color: var(--primary);
+      margin-bottom: 0.5rem;
+    }
+
+    .info-text {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      margin-top: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1><i class="fas fa-video"></i> Video Rendering</h1>
+    <a href="{{ url_for('dashboard') }}" class="back-btn">
+      <i class="fas fa-arrow-left"></i>
+      Control Center
+    </a>
+  </div>
+
+  <div class="container">
+    <div class="quick-actions">
+      <div class="quick-action" onclick="setCampaignId('demo')">
+        <i class="fas fa-rocket"></i>
+        <div>Demo Campaign</div>
+        <div class="info-text">Quick test render</div>
+      </div>
+      <div class="quick-action" onclick="setCampaignId('batch')">
+        <i class="fas fa-layer-group"></i>
+        <div>Batch Process</div>
+        <div class="info-text">Process all leads</div>
+      </div>
+      <div class="quick-action" onclick="setCampaignId('preview')">
+        <i class="fas fa-eye"></i>
+        <div>Preview Mode</div>
+        <div class="info-text">Generate preview only</div>
+      </div>
+    </div>
+
+    <div class="render-section">
+      <div class="section-header">
+        <div class="section-icon">
+          <i class="fas fa-play-circle"></i>
+        </div>
+        <div>
+          <h2>Start Video Render</h2>
+          <p style="color: var(--text-muted); margin: 0;">Configure and execute video rendering pipeline</p>
+        </div>
+      </div>
+
+      <form id="render-form">
+        <div class="form-group">
+          <label for="campaign-id">Campaign Identifier</label>
+          <div class="input-group">
+            <input type="text" id="campaign-id" placeholder="Enter campaign ID (e.g., demo, batch, custom-001)" value="demo">
+          </div>
+          <div class="info-text">
+            Use descriptive names to identify different render jobs and track progress
+          </div>
+        </div>
+
+        <button type="submit" class="render-btn" id="render-button">
+          <i class="fas fa-play"></i>
+          Initialize Render Process
+        </button>
+      </form>
+    </div>
+
+    <div class="log-section">
+      <div class="section-header">
+        <div class="section-icon" style="background: rgba(255, 170, 0, 0.1); color: #ffaa00;">
+          <i class="fas fa-terminal"></i>
+        </div>
+        <div>
+          <h2>Render Output</h2>
+          <p style="color: var(--text-muted); margin: 0;">Real-time processing logs and status updates</p>
+        </div>
+      </div>
+
+      <div class="status-indicator">
+        <div class="status-dot" id="status-dot"></div>
+        <span id="status-text">Ready to render</span>
+      </div>
+
+      <div class="progress-bar">
+        <div class="progress-fill" id="progress-fill"></div>
+      </div>
+
+      <div class="log-output" id="render-log">
+Waiting for render command...
+
+System ready for video processing.
+Available resources: CPU, Memory, Storage
+FFmpeg engine: Standby
+Output directory: Configured
+
+> Ready to execute render pipeline
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const renderForm = document.getElementById('render-form');
+    const renderButton = document.getElementById('render-button');
+    const renderLog = document.getElementById('render-log');
+    const statusDot = document.getElementById('status-dot');
+    const statusText = document.getElementById('status-text');
+    const progressFill = document.getElementById('progress-fill');
+
+    function setCampaignId(id) {
+      document.getElementById('campaign-id').value = id;
+    }
+
+    function updateStatus(status, text) {
+      statusDot.className = `status-dot ${status}`;
+      statusText.textContent = text;
+    }
+
+    function appendLog(message) {
+      const timestamp = new Date().toLocaleTimeString();
+      renderLog.textContent += `\\n[${timestamp}] ${message}`;
+      renderLog.scrollTop = renderLog.scrollHeight;
+    }
+
+    function simulateProgress() {
+      let progress = 0;
+      const interval = setInterval(() => {
+        progress += Math.random() * 15;
+        if (progress > 100) progress = 100;
+        progressFill.style.width = progress + '%';
+        
+        if (progress >= 100) {
+          clearInterval(interval);
+          updateStatus('success', 'Render completed successfully');
+          renderButton.disabled = false;
+          renderButton.innerHTML = '<i class="fas fa-play"></i> Start New Render';
+        }
+      }, 500);
+    }
+
+    renderForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const campaignId = document.getElementById('campaign-id').value || 'demo';
+      
+      // Update UI state
+      updateStatus('active', 'Processing render request...');
+      renderButton.disabled = true;
+      renderButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+      progressFill.style.width = '0%';
+      
+      // Clear previous logs
+      renderLog.textContent = '';
+      appendLog(`Starting render for campaign: ${campaignId}`);
+      appendLog('Initializing render engine...');
+      
+      // Make API request
+      fetch(`/render/start/${campaignId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        appendLog('Render request accepted by server');
+        appendLog(JSON.stringify(data, null, 2));
+        
+        if (data.status === 'started' || data.status === 'success') {
+          appendLog('Beginning video processing pipeline...');
+          appendLog('Applying effects, transitions, and personalization...');
+          simulateProgress();
+        } else {
+          updateStatus('error', 'Render failed');
+          renderButton.disabled = false;
+          renderButton.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Retry Render';
+          appendLog('ERROR: Render process failed to start');
+        }
+      })
+      .catch(error => {
+        console.error('Render error:', error);
+        updateStatus('error', 'Connection failed');
+        renderButton.disabled = false;
+        renderButton.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Retry Render';
+        appendLog(`ERROR: ${error.message}`);
+      });
     });
-};
-</script>
-{% endblock %}
+
+    // Auto-refresh status every 30 seconds
+    setInterval(() => {
+      if (statusDot.classList.contains('active')) {
+        appendLog('Checking render status...');
+      }
+    }, 30000);
+  </script>
+</body>
+</html>

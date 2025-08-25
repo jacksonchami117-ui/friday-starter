@@ -9,7 +9,6 @@ import importlib.metadata
 
 from flask import Flask, render_template, send_from_directory, jsonify, current_app
 from flask.cli import with_appcontext
-from flask_login import LoginManager, login_required
 from werkzeug.exceptions import HTTPException
 
 # Provide backwards-compatible werkzeug.__version__ for Flask test_client
@@ -27,6 +26,8 @@ from src.exports import exports_bp
 from src.diagnostics_routes import diagnostics_bp
 from src.editor import editor_bp
 from src.analytics_routes import analytics_bp
+from src.campaigns_routes import bp as campaigns_bp
+from src.settings_routes import bp as settings_bp
 
 BUILD_HASH = str(int(time.time()))
 
@@ -80,7 +81,10 @@ def create_app():
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(message)s",
-        handlers=[logging.FileHandler(log_path), logging.StreamHandler()],
+        handlers=[
+            RotatingFileHandler(log_path, maxBytes=5_000_000, backupCount=3),
+            logging.StreamHandler(),
+        ],
     )
     app.logger.info("=== FRIDAY Startup ===")
 
@@ -103,6 +107,8 @@ def create_app():
     app.register_blueprint(diagnostics_bp)
     app.register_blueprint(editor_bp)
     app.register_blueprint(analytics_bp)
+    app.register_blueprint(campaigns_bp)
+    app.register_blueprint(settings_bp)
 
     # CLI
     register_cli(app)
@@ -128,17 +134,19 @@ def create_app():
     def index():
         return render_template("index.html")
 
+    @app.route("/home")
+    def home():
+        return render_template("index.html")
+
     @app.route("/health")
     def health():
         return "ok", 200
 
     @app.route("/media/assets/<path:filename>")
-    @login_required
     def media_assets(filename):
         return send_from_directory(os.path.join(data_dir, "assets"), filename)
 
     @app.route("/media/thumbs/<path:filename>")
-    @login_required
     def media_thumbs(filename):
         return send_from_directory(os.path.join(data_dir, "outputs", "thumbs"), filename)
 

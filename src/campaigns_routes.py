@@ -1,27 +1,4 @@
 from __future__ import annotations
-from flask import Blueprint, render_template, send_file
-import os, csv, io
-
-bp = Blueprint("campaigns", __name__, url_prefix="/campaigns")
-
-def _progress_path(cid):
-    os.makedirs("state", exist_ok=True)
-    return f"state/{cid}_progress.csv"
-
-@bp.route("/")
-def campaigns_home():
-    cards = [
-        {"id": "demo", "name": "Demo Campaign", "lead_count": 10, "rendered": 7, "progress_pct": 70}
-    ]
-    return render_template("campaigns.html", cards=cards)
-
-@bp.route("/<cid>/progress.csv")
-def download_progress(cid):
-    needed = ["business","first","last","email","website","phone","date","status","reason","video","thumb","share"]
-    sio = io.StringIO()
-    w = csv.writer(sio)
-    w.writerow(needed)
-    return send_file(io.BytesIO(sio.getvalue().encode()), download_name="progress.csv", as_attachment=True)
 import os, json, csv, io, time, uuid, datetime as dt
 from dataclasses import dataclass, asdict
 from typing import Any, Dict, List, Tuple
@@ -38,16 +15,16 @@ def _campaigns_index_path() -> str:
     p = os.path.join(_state_dir(), "campaigns", "index.json")
     os.makedirs(os.path.dirname(p), exist_ok=True)
     if not os.path.exists(p):
-        with open(p, "w") as f:
+        with open(p, "w", encoding="utf-8", newline="") as f:
             json.dump({"campaigns": []}, f)
     return p
 
 def _load_index() -> Dict[str, Any]:
-    with open(_campaigns_index_path(), "r") as f:
+    with open(_campaigns_index_path(), "r", encoding="utf-8") as f:
         return json.load(f)
 
 def _save_index(data: Dict[str, Any]) -> None:
-    with open(_campaigns_index_path(), "w") as f:
+    with open(_campaigns_index_path(), "w", encoding="utf-8", newline="") as f:
         json.dump(data, f, indent=2)
 
 def _camp_dir(cid: str) -> str:
@@ -93,7 +70,7 @@ def _init_meta(cid: str, name: str) -> Dict[str, Any]:
         "counts": {"queued":0,"processing":0,"rendered":0,"failed":0,"invalid":0,"blocked":0,"temp":0},
         "lead_count": 0
     }
-    with open(_meta_path(cid), "w") as f:
+    with open(_meta_path(cid), "w", encoding="utf-8", newline="") as f:
         json.dump(meta, f, indent=2)
     return meta
 
@@ -101,12 +78,12 @@ def _load_meta(cid: str) -> Dict[str, Any]:
     p = _meta_path(cid)
     if not os.path.exists(p):
         return _init_meta(cid, "New Campaign")
-    with open(p,"r") as f:
+    with open(p, "r", encoding="utf-8") as f:
         return json.load(f)
 
 def _save_meta(cid: str, meta: Dict[str, Any]) -> None:
     meta["updated_at"] = dt.datetime.utcnow().isoformat()
-    with open(_meta_path(cid), "w") as f:
+    with open(_meta_path(cid), "w", encoding="utf-8", newline="") as f:
         json.dump(meta, f, indent=2)
 
 @bp.route("/", methods=["GET"])
@@ -189,13 +166,13 @@ def import_csv(cid: str):
 
     # write outputs
     os.makedirs(os.path.dirname(_leads_csv_path(cid)), exist_ok=True)
-    with open(_leads_csv_path(cid), "w", newline="") as f:
+    with open(_leads_csv_path(cid), "w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=REQUIRED_FIELDS)
         w.writeheader()
         for it in cleaned:
             w.writerow({k: it.get(k,"") for k in REQUIRED_FIELDS})
 
-    with open(_issues_csv_path(cid), "w", newline="") as f:
+    with open(_issues_csv_path(cid), "w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=["row","reason"])
         w.writeheader()
         for it in issues:
@@ -224,7 +201,7 @@ def download_issues_csv(cid: str):
 @bp.route("/<cid>/manifest", methods=["POST"])
 def save_manifest(cid: str):
     data = request.get_json(force=True, silent=True) or {}
-    with open(_manifest_path(cid), "w") as f:
+    with open(_manifest_path(cid), "w", encoding="utf-8", newline="") as f:
         json.dump(data, f, indent=2)
     meta = _load_meta(cid)
     meta["steps"]["Create Video Script"] = meta["steps"].get("Create Video Script","Done")
@@ -271,7 +248,7 @@ def download_progress(cid: str):
         return send_file(io.BytesIO(sio.getvalue().encode("utf-8")), as_attachment=True, download_name="render_progress.csv", mimetype="text/csv")
     
     # Read existing CSV and enhance with share URLs
-    with open(p,"r",newline="") as f:
+    with open(p, "r", newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         rows = list(reader)
     
@@ -315,7 +292,7 @@ def download_progress(cid: str):
     export_filename = f"campaign_{cid}_export_{int(time.time())}.csv"
     export_path = os.path.join(exports_dir, export_filename)
     
-    with open(export_path, "w", newline="") as f:
+    with open(export_path, "w", newline="", encoding="utf-8") as f:
         f.write(sio.getvalue())
     
     return send_file(io.BytesIO(sio.getvalue().encode("utf-8")), as_attachment=True, download_name="render_progress.csv", mimetype="text/csv")
@@ -363,7 +340,7 @@ def editor_page(cid: str):
     meta = _load_meta(cid)
     # ensure manifest exists
     if not os.path.exists(_manifest_path(cid)):
-        with open(_manifest_path(cid), "w") as f:
+        with open(_manifest_path(cid), "w", encoding="utf-8", newline="") as f:
             json.dump({"segments": [], "overlays": []}, f)
     return render_template("campaign_editor.html", meta=meta)
 
@@ -372,7 +349,7 @@ def get_manifest(cid: str):
     p = _manifest_path(cid)
     if not os.path.exists(p):
         return jsonify({"segments": [], "overlays": []})
-    with open(p, "r") as f:
+    with open(p, "r", encoding="utf-8") as f:
         return jsonify(json.load(f))
 
 # assets API

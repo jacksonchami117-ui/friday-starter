@@ -9,17 +9,23 @@ EXPORTS_DIR = os.path.join(STATE_DIR, "exports")
 def parse_csv(path):
     rows = []
     if os.path.exists(path):
-        with open(path) as f:
-            reader = csv.DictReader(f)
-            for r in reader: rows.append(r)
+        try:
+            with open(path, newline="", encoding="utf-8") as f:
+                reader = csv.DictReader(f)
+                for r in reader:
+                    rows.append(r)
+        except Exception:
+            return []
     return rows
 
 @analytics_bp.route("/", methods=["GET"], endpoint="analytics_home")
 def analytics_home():
     data = {}
+    if not os.path.isdir(EXPORTS_DIR):
+        return render_template("analytics.html", data=data)
     for fn in os.listdir(EXPORTS_DIR):
         if fn.endswith("_progress.csv"):
-            cid = fn.replace("_progress.csv","")
+            cid = fn.replace("_progress.csv", "")
             data[cid] = parse_csv(os.path.join(EXPORTS_DIR, fn))
     return render_template("analytics.html", data=data)
 

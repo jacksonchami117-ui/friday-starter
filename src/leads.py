@@ -41,7 +41,7 @@ def validate_row(row: dict):
     reasons = []
     # Required presence
     required_any = ["email", "Email", "e-mail"]
-    if not any(row.get(k, "").strip() for k in row.keys() if k in required_any):
+    if not any(str(row.get(k, "")).strip() for k in required_any if k in row):
         reasons.append("Missing email")
     # Rough email check
     email_val = None
@@ -216,7 +216,8 @@ def mapping():
     existing = {}
     if os.path.exists(paths["map_json"]):
         try:
-            existing = json.load(open(paths["map_json"], "r", encoding="utf-8"))
+            with open(paths["map_json"], "r", encoding="utf-8") as f:
+                existing = json.load(f)
         except Exception:
             existing = {}
 

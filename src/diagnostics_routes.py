@@ -1,5 +1,5 @@
 import os
-import csv
+from collections import deque
 from flask import Blueprint, render_template
 
 diagnostics_bp = Blueprint("diagnostics", __name__, url_prefix="/diagnostics")
@@ -9,6 +9,7 @@ def _data_dir():
     return os.getenv("DATA_DIR", os.path.join(base, "state"))
 
 @diagnostics_bp.route("/", methods=["GET"], endpoint="diagnostics_home")
+@diagnostics_bp.route("", methods=["GET"])
 def diagnostics_home():
     d = _data_dir()
     log_path = os.path.join(d, "logs", "app.log")
@@ -20,8 +21,7 @@ def diagnostics_home():
         if not os.path.exists(path):
             return ["(no logs yet)"]
         with open(path, "r", encoding="utf-8", errors="ignore") as f:
-            lines = f.readlines()
-        return lines[-n:] if len(lines) > n else lines
+            return list(deque(f, maxlen=n))
 
     counts = {
         "accepted": 0,
@@ -29,11 +29,11 @@ def diagnostics_home():
         "outputs": 0,
     }
     if os.path.exists(accepted):
-        with open(accepted, newline="", encoding="utf-8") as f: 
-            counts["accepted"] = sum(1 for _ in f) - 1 if sum(1 for _ in open(accepted, encoding="utf-8")) > 0 else 0
+        with open(accepted, newline="", encoding="utf-8") as f:
+            counts["accepted"] = max(sum(1 for _ in f) - 1, 0)
     if os.path.exists(rejected):
         with open(rejected, newline="", encoding="utf-8") as f:
-            counts["rejected"] = sum(1 for _ in f) - 1 if sum(1 for _ in open(rejected, encoding="utf-8")) > 0 else 0
+            counts["rejected"] = max(sum(1 for _ in f) - 1, 0)
     if os.path.exists(outputs):
         counts["outputs"] = len([n for n in os.listdir(outputs) if os.path.isfile(os.path.join(outputs, n))])
 

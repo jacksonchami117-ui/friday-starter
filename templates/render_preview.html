@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Render Preview</h2>
+<p>Loaded {{ count }} leads from file.</p>
+<h3>Preview:</h3>
+{{ table|safe }}
+<br><br><a href='/home'>← Back to Dashboard</a>
+{% endblock %}

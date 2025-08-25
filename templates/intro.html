@@ -6,8 +6,9 @@
   <title>Operation F.R.I.D.A.Y.</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/intro.css') }}">
 </head>
-<body>
-  <a class="skip" href="{{ url_for('index') }}">Skip Intro →</a>
+<body class="theme-dark">
+  <div class="scanlines"></div>
+  <a class="skip-btn" href="{{ url_for('dashboard') }}">Skip Intro →</a>
   <main class="boot">
     <section class="console">
       <pre id="console" class="console-text"></pre>

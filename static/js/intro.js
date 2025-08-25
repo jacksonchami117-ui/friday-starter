@@ -64,7 +64,7 @@ function runIntro() {
         setTimeout(() => {
           printLine("OPERATION F.R.I.D.A.Y. ENGAGED", 40, () => {
             setTimeout(() => {
-              window.location.href = "/home";
+              window.location.href = "/dashboard";
             }, 2500);
           });
         }, 2500);

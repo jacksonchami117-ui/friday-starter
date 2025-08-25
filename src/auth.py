@@ -11,7 +11,7 @@ class User(UserMixin):
 @auth_bp.route("/login", methods=["GET", "POST"])
 def login():
     if not ADMIN_PASSWORD:
-        return redirect(url_for("index"))  # auth disabled
+        return redirect(url_for("dashboard"))  # auth disabled
     if request.method == "POST":
         if request.form.get("password") == ADMIN_PASSWORD:
             login_user(User())

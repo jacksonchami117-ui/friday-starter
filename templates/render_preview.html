@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+  <h2>Render Preview</h2>
+  
+  {% if error %}
+    <div class="alert alert-warning">{{ error }}</div>
+    <a href="/" class="btn btn-primary">← Back to Dashboard</a>
+  {% else %}
+    <p>Loaded {{ total_count }} leads from file.</p>
+    
+    {% if preview_data %}
+      <h3>Preview (first 20 rows):</h3>
+      <div class="table-responsive">
+        <table class="table table-striped">
+          <thead>
+            <tr>
+              {% for key in preview_data[0].keys() %}
+                <th>{{ key }}</th>
+              {% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in preview_data %}
+              <tr>
+                {% for value in row.values() %}
+                  <td>{{ value | e }}</td>
+                {% endfor %}
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="alert alert-info">No data to preview</div>
+    {% endif %}
+    
+    <div class="mt-3">
+      <a href="/render/run" class="btn btn-success">Start Rendering</a>
+      <a href="/" class="btn btn-secondary">← Back to Dashboard</a>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

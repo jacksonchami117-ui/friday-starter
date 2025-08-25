@@ -1,0 +1,212 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+      <h2>System Health Dashboard</h2>
+      <p class="text-muted">Monitor FRIDAY system components and resources</p>
+    </div>
+  </div>
+  
+  <div class="row">
+    <!-- FFmpeg Status -->
+    <div class="col-md-6 col-lg-4 mb-3">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="card-title mb-0">
+            <i class="fa fa-video me-2"></i>FFmpeg
+          </h5>
+        </div>
+        <div class="card-body">
+          <p class="small text-muted">{{ health.ffmpeg }}</p>
+          <div class="badge {% if 'not' in health.ffmpeg.lower() %}bg-danger{% else %}bg-success{% endif %}">
+            {% if 'not' in health.ffmpeg.lower() %}Unavailable{% else %}Available{% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Storage Status -->
+    <div class="col-md-6 col-lg-4 mb-3">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="card-title mb-0">
+            <i class="fa fa-hdd me-2"></i>Storage
+          </h5>
+        </div>
+        <div class="card-body">
+          {% if health.s3_enabled %}
+            <p class="text-success">Using S3 storage</p>
+            <small class="text-muted">Bucket: {{ health.s3_bucket or "configured" }}</small>
+          {% elif health.disk.error %}
+            <p class="text-danger">{{ health.disk.error }}</p>
+          {% else %}
+            <div class="mb-2">
+              <small class="text-muted">Local storage: {{ health.data_dir }}</small>
+            </div>
+            <div class="progress mb-2" style="height: 10px;">
+              <div class="progress-bar {% if health.disk.percent > 85 %}bg-danger{% elif health.disk.percent > 70 %}bg-warning{% else %}bg-success{% endif %}" 
+                   style="width: {{ health.disk.percent }}%"></div>
+            </div>
+            <small class="text-muted">
+              {{ health.disk.used }}GB / {{ health.disk.total }}GB used ({{ health.disk.percent }}%)
+            </small>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    
+    <!-- Redis Status -->
+    <div class="col-md-6 col-lg-4 mb-3">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="card-title mb-0">
+            <i class="fa fa-database me-2"></i>Redis
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="badge {% if health.redis.status == 'connected' %}bg-success{% else %}bg-warning{% endif %}">
+            {{ health.redis.status.title() }}
+          </div>
+          {% if health.redis.error %}
+            <p class="small text-danger mt-2">{{ health.redis.error }}</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    
+    <!-- Celery Workers -->
+    <div class="col-md-6 col-lg-4 mb-3">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="card-title mb-0">
+            <i class="fa fa-cogs me-2"></i>Workers
+          </h5>
+        </div>
+        <div class="card-body">
+          {% if health.celery.status == 'disabled' %}
+            <div class="badge bg-secondary">Disabled</div>
+            <p class="small text-muted mt-2">Set USE_CELERY=1 to enable</p>
+          {% elif health.celery.status == 'active' %}
+            <div class="badge bg-success">{{ health.celery.workers }} Active</div>
+          {% elif health.celery.status == 'no workers' %}
+            <div class="badge bg-warning">No Workers</div>
+            <p class="small text-warning mt-2">Start celery workers</p>
+          {% else %}
+            <div class="badge bg-danger">{{ health.celery.status.title() }}</div>
+            {% if health.celery.error %}
+              <p class="small text-danger mt-2">{{ health.celery.error }}</p>
+            {% endif %}
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    
+    <!-- Queue Depth -->
+    <div class="col-md-6 col-lg-4 mb-3">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="card-title mb-0">
+            <i class="fa fa-tasks me-2"></i>Render Queue
+          </h5>
+        </div>
+        <div class="card-body">
+          {% if health.queue.error %}
+            <div class="badge bg-secondary">N/A</div>
+            <p class="small text-muted mt-2">{{ health.queue.error }}</p>
+          {% elif health.queue.status %}
+            <div class="badge bg-secondary">{{ health.queue.status.title() }}</div>
+          {% else %}
+            <div class="badge {% if health.queue.total > 0 %}bg-info{% else %}bg-success{% endif %}">
+              {{ health.queue.total }} Jobs
+            </div>
+            {% if health.queue.total > 0 %}
+              <p class="small text-muted mt-2">
+                {{ health.queue.active }} active, {{ health.queue.reserved }} queued
+              </p>
+            {% endif %}
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    
+    <!-- System Info -->
+    <div class="col-md-6 col-lg-4 mb-3">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="card-title mb-0">
+            <i class="fa fa-info-circle me-2"></i>System
+          </h5>
+        </div>
+        <div class="card-body">
+          <p class="small mb-1"><strong>Data Directory:</strong></p>
+          <p class="small text-muted mb-2">{{ health.data_dir }}</p>
+          <p class="small mb-1"><strong>Environment:</strong></p>
+          <div class="badge bg-info">
+            {% if config.DEBUG %}Development{% else %}Production{% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Error Logs -->
+  <div class="row mt-4">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="card-title mb-0">
+            <i class="fa fa-exclamation-triangle me-2"></i>Recent Log Entries
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="log-container" style="max-height: 300px; overflow-y: auto;">
+            <pre class="small text-muted mb-0">{% for line in error_logs %}{{ line }}
+{% endfor %}</pre>
+          </div>
+          {% if not error_logs or error_logs == ["(no logs yet)"] %}
+            <p class="text-muted small">No recent log entries</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="row mt-4">
+    <div class="col-12">
+      <div class="alert alert-info">
+        <h6><i class="fa fa-info-circle me-2"></i>Troubleshooting</h6>
+        <ul class="mb-0 small">
+          <li><strong>FFmpeg issues:</strong> Ensure FFmpeg is installed and in PATH</li>
+          <li><strong>Redis connection:</strong> Check REDIS_URL environment variable</li>
+          <li><strong>No workers:</strong> Start celery with: <code>celery -A celery_worker.celery worker -Q render --concurrency=2</code></li>
+          <li><strong>S3 errors:</strong> Verify AWS credentials and bucket permissions</li>
+          <li><strong>High disk usage:</strong> Clean up old outputs or enable S3 storage</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.card {
+  border: none;
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+.card-header {
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #dee2e6;
+}
+.progress {
+  background-color: #e9ecef;
+}
+.log-container {
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 0.375rem;
+  padding: 0.75rem;
+  font-family: 'Courier New', monospace;
+}
+</style>
+{% endblock %}

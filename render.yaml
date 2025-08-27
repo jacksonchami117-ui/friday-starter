@@ -3,13 +3,8 @@ services:
     name: friday-starter
     env: python
     buildCommand: |
-      pip install --upgrade pip --break-system-packages
-      export PIP_ONLY_BINARY=:all:
-      pip install -r requirements.txt --no-cache-dir
-      mkdir -p logs
-      ls -la static || true
-      python -m py_compile app.py
-      flask diagnostics-selftest
+      pip install -r requirements.txt
+      if [ -d "web" ]; then cd web && npm ci && npm run build; fi
     startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
     envVars:
       - key: SECRET_KEY

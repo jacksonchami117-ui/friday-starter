@@ -1,11 +1,12 @@
 services:
+  # Main web application
   - type: web
     name: friday-starter
     env: python
     buildCommand: |
       pip install -r requirements.txt
       if [ -d "web" ]; then cd web && npm ci && npm run build; fi
-    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 240
     envVars:
       - key: SECRET_KEY
         generateValue: true
@@ -15,6 +16,62 @@ services:
         value: /data/state
       - key: USE_DB
         value: "1"
+      - key: USE_CELERY
+        value: "1"
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: friday-redis
+          property: connectionString
+      - key: DATABASE_URL
+        fromService:
+          type: pserv
+          name: friday-postgres
+          property: connectionString
     disk:
       name: data
       mountPath: /data
+
+  # Celery worker for video rendering
+  - type: worker
+    name: friday-worker
+    env: python
+    buildCommand: |
+      pip install -r requirements.txt
+    startCommand: celery -A celery_worker.celery worker --loglevel=info --concurrency=2
+    envVars:
+      - key: STATE_DIR
+        value: /data/state
+      - key: USE_CELERY
+        value: "1"
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: friday-redis
+          property: connectionString
+      - key: DATABASE_URL
+        fromService:
+          type: pserv
+          name: friday-postgres
+          property: connectionString
+    disk:
+      name: data
+      mountPath: /data
+
+# Redis for Celery broker and result backend
+- type: redis
+  name: friday-redis
+  ipAllowList: []
+  maxmemoryPolicy: allkeys-lru
+  plan: free
+
+# PostgreSQL database
+- type: pserv
+  name: friday-postgres
+  env: postgresql
+  plan: free
+  ipAllowList: []
+  disk:
+    name: postgres-data
+    mountPath: /var/lib/postgresql/data
+    sizeGB: 1

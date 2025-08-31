@@ -1,12 +1,10 @@
 services:
-  # Redis for Celery broker and result backend (must be first)
+  # Redis for Celery broker and result backend
   - type: redis
     name: friday-redis
-    ipAllowList: []
-    maxmemoryPolicy: allkeys-lru
     plan: free
 
-  # PostgreSQL database (must be second)
+  # PostgreSQL database
   - type: pserv
     name: friday-postgres
     plan: free
@@ -15,9 +13,7 @@ services:
   - type: web
     name: friday-starter
     env: python
-    buildCommand: |
-      pip install -r requirements.txt
-      if [ -d "web" ]; then cd web && npm ci && npm run build; fi
+    buildCommand: pip install -r requirements.txt
     startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 240
     envVars:
       - key: SECRET_KEY
@@ -42,8 +38,7 @@ services:
   - type: worker
     name: friday-worker
     env: python
-    buildCommand: |
-      pip install -r requirements.txt
+    buildCommand: pip install -r requirements.txt
     startCommand: celery -A celery_worker.celery worker --loglevel=info --concurrency=2
     envVars:
       - key: STATE_DIR

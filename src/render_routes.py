@@ -80,7 +80,7 @@ def run_render():
 
     if not os.path.exists(p["accepted"]):
         flash("No leads uploaded yet.", "warning")
-        return redirect(url_for("leads.leads_home"))
+        return redirect(url_for("leads.index"))
 
     try:
         # Import Celery tasks
@@ -100,7 +100,7 @@ def run_render():
     except Exception as e:
         current_app.logger.error(f"Error starting render: {e}")
         flash(f"Error starting render: {e}", "error")
-        return redirect(url_for("leads.leads_home"))
+        return redirect(url_for("leads.index"))
 
 @render_bp.route("/")
 def index():

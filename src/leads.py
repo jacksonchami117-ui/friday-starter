@@ -39,18 +39,22 @@ def normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
 
 def validate_row(row: dict):
     reasons = []
-    # Required presence
-    required_any = ["email", "Email", "e-mail"]
-    if not any(row.get(k, "").strip() for k in row.keys() if k in required_any):
-        reasons.append("Missing email")
-    # Rough email check
+    # Required presence - check for email in various column names
+    email_columns = ["email", "Email", "e-mail", "E-mail", "owner(s) email", "Owner(s) Email", "owner email", "Owner Email"]
+    email_found = False
     email_val = None
-    for k in ["Email", "email", "E-mail"]:
-        if k in row:
-            email_val = str(row.get(k, "")).strip()
+    
+    for col in email_columns:
+        if col in row and row[col] and str(row[col]).strip():
+            email_val = str(row[col]).strip()
+            email_found = True
             break
-    if email_val and not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email_val):
+    
+    if not email_found:
+        reasons.append("Missing email")
+    elif email_val and not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email_val):
         reasons.append("Invalid email format")
+    
     return reasons
 
 @leads_bp.route("/", methods=["GET"])

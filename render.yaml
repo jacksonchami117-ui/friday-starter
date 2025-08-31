@@ -1,6 +1,7 @@
 services:
   - type: redis
     name: friday-redis
+    ipAllowList: []
     plan: free
 
   - type: pserv

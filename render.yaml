@@ -14,7 +14,7 @@ services:
   # Main web application
   - type: web
     name: friday-starter
-    runtime: python
+    env: python
     buildCommand: |
       pip install -r requirements.txt
       if [ -d "web" ]; then cd web && npm ci && npm run build; fi
@@ -31,15 +31,9 @@ services:
       - key: USE_CELERY
         value: "1"
       - key: REDIS_URL
-        fromService:
-          type: redis
-          name: friday-redis
-          property: connectionString
+        value: redis://friday-redis:6379
       - key: DATABASE_URL
-        fromService:
-          type: pserv
-          name: friday-postgres
-          property: connectionString
+        value: postgresql://postgres:postgres@friday-postgres:5432/friday
     disk:
       name: data
       mountPath: /data
@@ -47,7 +41,7 @@ services:
   # Celery worker for video rendering
   - type: worker
     name: friday-worker
-    runtime: python
+    env: python
     buildCommand: |
       pip install -r requirements.txt
     startCommand: celery -A celery_worker.celery worker --loglevel=info --concurrency=2
@@ -57,15 +51,9 @@ services:
       - key: USE_CELERY
         value: "1"
       - key: REDIS_URL
-        fromService:
-          type: redis
-          name: friday-redis
-          property: connectionString
+        value: redis://friday-redis:6379
       - key: DATABASE_URL
-        fromService:
-          type: pserv
-          name: friday-postgres
-          property: connectionString
+        value: postgresql://postgres:postgres@friday-postgres:5432/friday
     disk:
       name: data
       mountPath: /data

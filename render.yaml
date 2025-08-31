@@ -9,13 +9,7 @@ services:
   # PostgreSQL database (must be second)
   - type: pserv
     name: friday-postgres
-    env: postgresql
     plan: free
-    ipAllowList: []
-    disk:
-      name: postgres-data
-      mountPath: /var/lib/postgresql/data
-      sizeGB: 1
 
   # Main web application
   - type: web
@@ -45,7 +39,6 @@ services:
         fromService:
           type: pserv
           name: friday-postgres
-          property: connectionString
     disk:
       name: data
       mountPath: /data
@@ -71,7 +64,7 @@ services:
         fromService:
           type: pserv
           name: friday-postgres
-          property: connectionString
     disk:
       name: data
       mountPath: /data
+

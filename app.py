@@ -160,12 +160,16 @@ def create_app():
 
         # Routes
         @app.route("/")
-        def intro():
+        def home():
             return render_template("intro.html")
             
         @app.route("/dashboard")
         def dashboard():
             return render_template("index.html")
+            
+        @app.route("/home")
+        def home_alt():
+            return redirect(url_for('dashboard'))
             
         @app.route("/test-intro")
         def test_intro():

@@ -1,4 +1,13 @@
 services:
+  - type: redis
+    name: friday-redis
+    ipAllowList: []
+    plan: free
+
+  - type: pserv
+    name: friday-postgres
+    plan: free
+
   - type: web
     name: friday-starter
     env: python
@@ -7,4 +16,37 @@ services:
     envVars:
       - key: SECRET_KEY
         generateValue: true
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: STATE_DIR
+        value: /data/state
+      - key: USE_DB
+        value: "1"
+      - key: USE_CELERY
+        value: "1"
+      - key: REDIS_URL
+        value: redis://friday-redis:6379
+      - key: DATABASE_URL
+        value: postgresql://postgres:postgres@friday-postgres:5432/friday
+    disk:
+      name: data
+      mountPath: /data
+
+  - type: worker
+    name: friday-worker
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: celery -A celery_worker.celery worker --loglevel=info --concurrency=2
+    envVars:
+      - key: STATE_DIR
+        value: /data/state
+      - key: USE_CELERY
+        value: "1"
+      - key: REDIS_URL
+        value: redis://friday-redis:6379
+      - key: DATABASE_URL
+        value: postgresql://postgres:postgres@friday-postgres:5432/friday
+    disk:
+      name: data
+      mountPath: /data
 

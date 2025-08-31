@@ -14,7 +14,7 @@ services:
   # Main web application
   - type: web
     name: friday-starter
-    env: python
+    runtime: python
     buildCommand: |
       pip install -r requirements.txt
       if [ -d "web" ]; then cd web && npm ci && npm run build; fi
@@ -39,6 +39,7 @@ services:
         fromService:
           type: pserv
           name: friday-postgres
+          property: connectionString
     disk:
       name: data
       mountPath: /data
@@ -46,7 +47,7 @@ services:
   # Celery worker for video rendering
   - type: worker
     name: friday-worker
-    env: python
+    runtime: python
     buildCommand: |
       pip install -r requirements.txt
     startCommand: celery -A celery_worker.celery worker --loglevel=info --concurrency=2
@@ -64,6 +65,7 @@ services:
         fromService:
           type: pserv
           name: friday-postgres
+          property: connectionString
     disk:
       name: data
       mountPath: /data

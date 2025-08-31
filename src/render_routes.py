@@ -82,35 +82,25 @@ def run_render():
         flash("No leads uploaded yet.", "warning")
         return redirect(url_for("leads.leads_home"))
 
-    # Dummy render: one file per lead
-    total, ok = 0, 0
-    with open(p["accepted"], newline="", encoding="utf-8") as f_in:
-        reader = csv.DictReader(f_in)
-        rows = list(reader)
-
-    # write progress
-    prog_path = p["progress"]
-    with open(prog_path, "w", newline="", encoding="utf-8") as f_prog:
-        writer = csv.writer(f_prog)
-        writer.writerow(["index", "status", "note"])
-
-        for i, row in enumerate(rows, start=1):
-            total += 1
-            try:
-                first = row.get("first_name") or row.get("First Name") or row.get("First") or row.get("Name") or ""
-                email = row.get("email") or row.get("Email") or ""
-                fname = f"lead_{i:04d}.txt"
-                out_path = os.path.join(p["outputs"], fname)
-                with open(out_path, "w", encoding="utf-8") as f_out:
-                    f_out.write(f"Hello {first or 'there'} ({email}), this is a placeholder render.\n")
-                writer.writerow([i, "ok", fname])
-                ok += 1
-            except Exception as e:
-                writer.writerow([i, "error", str(e)])
-                current_app.logger.exception("Render error")
-
-    flash(f"Rendered {ok}/{total} outputs (dummy files).", "success")
-    return redirect(url_for("exports.explore"))
+    try:
+        # Import Celery tasks
+        from celery_worker import batch_render_task
+        
+        # Read leads from CSV
+        with open(p["accepted"], newline="", encoding="utf-8") as f_in:
+            reader = csv.DictReader(f_in)
+            leads_data = list(reader)
+        
+        # Queue batch render task
+        task = batch_render_task.delay(leads_data, STATE_DIR)
+        
+        flash(f"Started rendering {len(leads_data)} videos. Task ID: {task.id}", "success")
+        return redirect(url_for("exports.explore"))
+        
+    except Exception as e:
+        current_app.logger.error(f"Error starting render: {e}")
+        flash(f"Error starting render: {e}", "error")
+        return redirect(url_for("leads.leads_home"))
 
 @render_bp.route("/")
 def index():

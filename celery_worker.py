@@ -30,13 +30,13 @@ celery = celery_app
 logger = get_task_logger(__name__)
 
 @celery_app.task(bind=True)
-def render_video_task(self, lead_data, template_config):
+def render_video_task(self, lead_data, data_dir=None):
     """Render personalized video for a lead"""
     try:
         logger.info(f"Starting video render for lead: {lead_data.get('email', 'unknown')}")
         
         # Import here to avoid circular imports
-        from src.render_engine import render_personalized_video
+        from src.render_engine import render_one_lead
         
         # Update task state
         self.update_state(
@@ -44,14 +44,18 @@ def render_video_task(self, lead_data, template_config):
             meta={'current': 0, 'total': 100, 'status': 'Initializing render...'}
         )
         
-        # Render the video
-        result = render_personalized_video(lead_data, template_config, progress_callback=self.update_state)
+        # Use the actual data directory
+        if not data_dir:
+            data_dir = os.getenv('STATE_DIR', 'state')
+        
+        # Render the video using the actual function
+        video_path, thumb_path = render_one_lead(lead_data, data_dir)
         
         logger.info(f"Video render completed for lead: {lead_data.get('email', 'unknown')}")
         return {
             'status': 'success',
-            'video_path': result.get('video_path'),
-            'thumbnail_path': result.get('thumbnail_path')
+            'video_path': video_path,
+            'thumbnail_path': thumb_path
         }
         
     except Exception as exc:
@@ -59,7 +63,7 @@ def render_video_task(self, lead_data, template_config):
         raise self.retry(exc=exc, countdown=60, max_retries=3)
 
 @celery_app.task(bind=True)
-def batch_render_task(self, leads_data, template_config):
+def batch_render_task(self, leads_data, data_dir=None):
     """Render videos for multiple leads in batch"""
     try:
         logger.info(f"Starting batch render for {len(leads_data)} leads")
@@ -80,7 +84,7 @@ def batch_render_task(self, leads_data, template_config):
             )
             
             # Render individual video
-            result = render_video_task.delay(lead_data, template_config)
+            result = render_video_task.delay(lead_data, data_dir)
             results.append({
                 'lead_email': lead_data.get('email'),
                 'task_id': result.id,

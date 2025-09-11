@@ -18,6 +18,7 @@ env:
   AWS_ROLE_DEPLOY: ${{ vars.AWS_ROLE_DEPLOY }}
   ECR_REGISTRY: ${{ vars.ECR_REGISTRY }}
   ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+  STACK_NAME: apprunner-friday-starter-prod
   APP_RUNNER_STACK_NAME: ${{ vars.APP_RUNNER_STACK_NAME }}
   APP_RUNNER_SERVICE_NAME: ${{ vars.APP_RUNNER_SERVICE_NAME }}
   APP_RUNNER_PORT: ${{ vars.APP_RUNNER_PORT }}
@@ -85,15 +86,28 @@ jobs:
               Value: !GetAtt Svc.ServiceUrl
           YAML
 
+      - name: Compute stack name
+        run: |
+          # Prefer STACK_NAME if set, otherwise use APP_RUNNER_STACK_NAME for backward compatibility
+          if [ -n "$STACK_NAME" ]; then
+            echo "STACK_NAME=$STACK_NAME" >> $GITHUB_ENV
+          elif [ -n "$APP_RUNNER_STACK_NAME" ]; then
+            echo "STACK_NAME=$APP_RUNNER_STACK_NAME" >> $GITHUB_ENV
+          else
+            echo "Error: Neither STACK_NAME nor APP_RUNNER_STACK_NAME is set"
+            exit 1
+          fi
+          echo "Using stack name: $STACK_NAME"
+
       - name: Deploy CloudFormation
         id: cfn
         run: |
           aws cloudformation deploy \
-            --stack-name "$APP_RUNNER_STACK_NAME" \
+            --stack-name "$STACK_NAME" \
             --template-file infra/apprunner.yaml \
             --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
             --no-fail-on-empty-changeset
-          URL=$(aws cloudformation describe-stacks --stack-name "$APP_RUNNER_STACK_NAME" \
+          URL=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" \
             --query 'Stacks[0].Outputs[?OutputKey==`ServiceUrl`].OutputValue' --output text)
           echo "service_url=$URL" >> $GITHUB_OUTPUT
 

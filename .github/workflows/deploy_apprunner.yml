@@ -36,6 +36,49 @@ jobs:
           role-to-assume: ${{ env.AWS_ROLE_DEPLOY }}
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Validate and compute required variables
+        run: |
+          # Check required variables
+          if [ -z "$AWS_REGION" ]; then
+            echo "ERROR: AWS_REGION is required"
+            exit 1
+          fi
+          if [ -z "$AWS_ROLE_DEPLOY" ]; then
+            echo "ERROR: AWS_ROLE_DEPLOY is required"
+            exit 1
+          fi
+          if [ -z "$ECR_REPOSITORY" ]; then
+            echo "ERROR: ECR_REPOSITORY is required"
+            exit 1
+          fi
+          if [ -z "$APP_RUNNER_STACK_NAME" ]; then
+            echo "ERROR: APP_RUNNER_STACK_NAME is required"
+            exit 1
+          fi
+          if [ -z "$APP_RUNNER_SERVICE_NAME" ]; then
+            echo "ERROR: APP_RUNNER_SERVICE_NAME is required"
+            exit 1
+          fi
+          
+          # Compute ECR_REGISTRY if not provided
+          if [ -z "$ECR_REGISTRY" ]; then
+            ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+            ECR_REGISTRY="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+            echo "ECR_REGISTRY=${ECR_REGISTRY}" >> $GITHUB_ENV
+            echo "Computed ECR_REGISTRY: $ECR_REGISTRY"
+          else
+            echo "Using provided ECR_REGISTRY: $ECR_REGISTRY"
+          fi
+
+      - name: Ensure ECR repository exists
+        run: |
+          # Create ECR repository if it doesn't exist (idempotent)
+          aws ecr describe-repositories --repository-names "$ECR_REPOSITORY" --region "$AWS_REGION" >/dev/null 2>&1 || {
+            echo "Creating ECR repository: $ECR_REPOSITORY"
+            aws ecr create-repository --repository-name "$ECR_REPOSITORY" --region "$AWS_REGION"
+          }
+          echo "ECR repository $ECR_REPOSITORY exists"
+
       - name: Login to ECR
         uses: aws-actions/amazon-ecr-login@v2
 
@@ -55,6 +98,19 @@ jobs:
           cat > infra/apprunner.yaml <<YAML
           AWSTemplateFormatVersion: '2010-09-09'
           Resources:
+            AppRunnerECRAccessRole:
+              Type: AWS::IAM::Role
+              Properties:
+                RoleName: !Sub "\${AWS::StackName}-AppRunnerECRAccessRole"
+                AssumeRolePolicyDocument:
+                  Version: '2012-10-17'
+                  Statement:
+                    - Effect: Allow
+                      Principal:
+                        Service: build.apprunner.amazonaws.com
+                      Action: sts:AssumeRole
+                ManagedPolicyArns:
+                  - arn:aws:iam::aws:policy/service-role/AWSAppRunnerServicePolicyForECRAccess
             Svc:
               Type: AWS::AppRunner::Service
               Properties:
@@ -72,7 +128,7 @@ jobs:
                         - Name: APP_VERSION
                           Value: '${{ github.sha }}'
                   AuthenticationConfiguration:
-                    AccessRoleArn: ${AWS_ROLE_DEPLOY}
+                    AccessRoleArn: !GetAtt AppRunnerECRAccessRole.Arn
                 HealthCheckConfiguration:
                   Protocol: HTTP
                   Path: /healthz
@@ -88,14 +144,30 @@ jobs:
       - name: Deploy CloudFormation
         id: cfn
         run: |
-          aws cloudformation deploy \
+          echo "Deploying CloudFormation stack: $APP_RUNNER_STACK_NAME"
+          
+          # Deploy the stack
+          if aws cloudformation deploy \
             --stack-name "$APP_RUNNER_STACK_NAME" \
             --template-file infra/apprunner.yaml \
             --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
-            --no-fail-on-empty-changeset
+            --no-fail-on-empty-changeset; then
+            echo "CloudFormation deployment successful"
+          else
+            echo "CloudFormation deployment failed. Recent stack events:"
+            aws cloudformation describe-stack-events \
+              --stack-name "$APP_RUNNER_STACK_NAME" \
+              --query 'StackEvents[?Timestamp>=`2024-01-01`][ResourceStatus,ResourceStatusReason,LogicalResourceId,Timestamp]' \
+              --output table \
+              --max-items 20 || true
+            exit 1
+          fi
+          
+          # Get the service URL
           URL=$(aws cloudformation describe-stacks --stack-name "$APP_RUNNER_STACK_NAME" \
             --query 'Stacks[0].Outputs[?OutputKey==`ServiceUrl`].OutputValue' --output text)
           echo "service_url=$URL" >> $GITHUB_OUTPUT
+          echo "App Runner service URL: $URL"
 
   smoke_and_screenshot:
     needs: build_and_push
@@ -105,11 +177,18 @@ jobs:
         env:
           URL: ${{ needs.build_and_push.outputs.service_url }}
         run: |
+          echo "Waiting for App Runner service to be ready at: $URL"
           for i in {1..60}; do
+            echo "Attempt $i/60: Checking health endpoint..."
             code=$(curl -s -o /dev/null -w '%{http_code}' "$URL/healthz" || true)
-            [ "$code" = "200" ] && exit 0
+            echo "HTTP status: $code"
+            [ "$code" = "200" ] && {
+              echo "Service is ready!"
+              exit 0
+            }
             sleep 5
           done
+          echo "Service failed to become ready after 5 minutes"
           exit 1
 
       - uses: actions/setup-node@v4
@@ -125,7 +204,9 @@ jobs:
         env:
           URL: ${{ needs.build_and_push.outputs.service_url }}
         run: |
+          echo "Taking screenshot of: $URL"
           node -e "const {chromium}=require('playwright');(async()=>{const b=await chromium.launch();const p=await b.newPage();await p.goto(process.env.URL,{waitUntil:'domcontentloaded'});await p.screenshot({path:'home.png',fullPage:true});await b.close();})();"
+          echo "Screenshot saved as home.png"
 
       - uses: actions/upload-artifact@v4
         with:

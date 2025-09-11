@@ -20,7 +20,7 @@ env:
   ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
   APP_RUNNER_STACK_NAME: ${{ vars.APP_RUNNER_STACK_NAME }}
   APP_RUNNER_SERVICE_NAME: ${{ vars.APP_RUNNER_SERVICE_NAME }}
-  APP_RUNNER_PORT: ${{ vars.APP_RUNNER_PORT || 5000 }}
+  APP_RUNNER_PORT: ${{ vars.APP_RUNNER_PORT }}
 
 jobs:
   build_and_push:
@@ -47,9 +47,12 @@ jobs:
           docker push "$IMAGE"
 
       - name: Write App Runner template
+        env:
+          PORT: ${{ env.APP_RUNNER_PORT }}
         run: |
+          PORT=${PORT:-5000}
           mkdir -p infra
-          cat > infra/apprunner.yaml <<'YAML'
+          cat > infra/apprunner.yaml <<YAML
           AWSTemplateFormatVersion: '2010-09-09'
           Resources:
             Svc:
@@ -62,10 +65,12 @@ jobs:
                     ImageIdentifier: ${ECR_REGISTRY}/${ECR_REPOSITORY}:${{ github.sha }}
                     ImageRepositoryType: ECR
                     ImageConfiguration:
-                      Port: '${APP_RUNNER_PORT}'
+                      Port: '${PORT}'
                       RuntimeEnvironmentVariables:
-                        - { Name: AUTO_START,  Value: 'true' }
-                        - { Name: APP_VERSION, Value: '${{ github.sha }}' }
+                        - Name: AUTO_START
+                          Value: 'true'
+                        - Name: APP_VERSION
+                          Value: '${{ github.sha }}'
                   AuthenticationConfiguration:
                     AccessRoleArn: ${AWS_ROLE_DEPLOY}
                 HealthCheckConfiguration:
@@ -88,7 +93,9 @@ jobs:
             --template-file infra/apprunner.yaml \
             --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
             --no-fail-on-empty-changeset
-          echo "service_url=$(aws cloudformation describe-stacks --stack-name \"$APP_RUNNER_STACK_NAME\" --query 'Stacks[0].Outputs[?OutputKey==`ServiceUrl`].OutputValue' --output text)" >> $GITHUB_OUTPUT
+          URL=$(aws cloudformation describe-stacks --stack-name "$APP_RUNNER_STACK_NAME" \
+            --query 'Stacks[0].Outputs[?OutputKey==`ServiceUrl`].OutputValue' --output text)
+          echo "service_url=$URL" >> $GITHUB_OUTPUT
 
   smoke_and_screenshot:
     needs: build_and_push
@@ -103,17 +110,24 @@ jobs:
             [ "$code" = "200" ] && exit 0
             sleep 5
           done
-          echo "Service not ready"; exit 1
+          exit 1
 
       - uses: actions/setup-node@v4
-        with: { node-version: '20' }
+        with:
+          node-version: '20'
 
-      - run: npm -g i playwright@1 && npx playwright install --with-deps
+      - name: Install Playwright
+        run: |
+          npm -g i playwright@1
+          npx playwright install --with-deps
 
       - name: Screenshot home
-        env: { URL: ${{ needs.build_and_push.outputs.service_url }} }
+        env:
+          URL: ${{ needs.build_and_push.outputs.service_url }}
         run: |
           node -e "const {chromium}=require('playwright');(async()=>{const b=await chromium.launch();const p=await b.newPage();await p.goto(process.env.URL,{waitUntil:'domcontentloaded'});await p.screenshot({path:'home.png',fullPage:true});await b.close();})();"
 
       - uses: actions/upload-artifact@v4
-        with: { name: screenshot, path: home.png }
+        with:
+          name: screenshot
+          path: home.png

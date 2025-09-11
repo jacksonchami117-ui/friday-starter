@@ -1,0 +1,119 @@
+name: Deploy — App Runner (CI-only)
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: deploy-apprunner-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  AWS_ROLE_DEPLOY: ${{ vars.AWS_ROLE_DEPLOY }}
+  ECR_REGISTRY: ${{ vars.ECR_REGISTRY }}
+  ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+  APP_RUNNER_STACK_NAME: ${{ vars.APP_RUNNER_STACK_NAME }}
+  APP_RUNNER_SERVICE_NAME: ${{ vars.APP_RUNNER_SERVICE_NAME }}
+  APP_RUNNER_PORT: ${{ vars.APP_RUNNER_PORT || 5000 }}
+
+jobs:
+  build_and_push:
+    runs-on: ubuntu-latest
+    outputs:
+      service_url: ${{ steps.cfn.outputs.service_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_DEPLOY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build & push image
+        env:
+          IMAGE: ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+        run: |
+          docker build --build-arg APP_VERSION=${{ github.sha }} -t "$IMAGE" .
+          docker push "$IMAGE"
+
+      - name: Write App Runner template
+        run: |
+          mkdir -p infra
+          cat > infra/apprunner.yaml <<'YAML'
+          AWSTemplateFormatVersion: '2010-09-09'
+          Resources:
+            Svc:
+              Type: AWS::AppRunner::Service
+              Properties:
+                ServiceName: ${APP_RUNNER_SERVICE_NAME}
+                SourceConfiguration:
+                  AutoDeploymentsEnabled: true
+                  ImageRepository:
+                    ImageIdentifier: ${ECR_REGISTRY}/${ECR_REPOSITORY}:${{ github.sha }}
+                    ImageRepositoryType: ECR
+                    ImageConfiguration:
+                      Port: '${APP_RUNNER_PORT}'
+                      RuntimeEnvironmentVariables:
+                        - { Name: AUTO_START,  Value: 'true' }
+                        - { Name: APP_VERSION, Value: '${{ github.sha }}' }
+                  AuthenticationConfiguration:
+                    AccessRoleArn: ${AWS_ROLE_DEPLOY}
+                HealthCheckConfiguration:
+                  Protocol: HTTP
+                  Path: /healthz
+                  Interval: 10
+                  Timeout: 5
+                  HealthyThreshold: 1
+                  UnhealthyThreshold: 3
+          Outputs:
+            ServiceUrl:
+              Value: !GetAtt Svc.ServiceUrl
+          YAML
+
+      - name: Deploy CloudFormation
+        id: cfn
+        run: |
+          aws cloudformation deploy \
+            --stack-name "$APP_RUNNER_STACK_NAME" \
+            --template-file infra/apprunner.yaml \
+            --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
+            --no-fail-on-empty-changeset
+          echo "service_url=$(aws cloudformation describe-stacks --stack-name \"$APP_RUNNER_STACK_NAME\" --query 'Stacks[0].Outputs[?OutputKey==`ServiceUrl`].OutputValue' --output text)" >> $GITHUB_OUTPUT
+
+  smoke_and_screenshot:
+    needs: build_and_push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for readiness
+        env:
+          URL: ${{ needs.build_and_push.outputs.service_url }}
+        run: |
+          for i in {1..60}; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' "$URL/healthz" || true)
+            [ "$code" = "200" ] && exit 0
+            sleep 5
+          done
+          echo "Service not ready"; exit 1
+
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+
+      - run: npm -g i playwright@1 && npx playwright install --with-deps
+
+      - name: Screenshot home
+        env: { URL: ${{ needs.build_and_push.outputs.service_url }} }
+        run: |
+          node -e "const {chromium}=require('playwright');(async()=>{const b=await chromium.launch();const p=await b.newPage();await p.goto(process.env.URL,{waitUntil:'domcontentloaded'});await p.screenshot({path:'home.png',fullPage:true});await b.close();})();"
+
+      - uses: actions/upload-artifact@v4
+        with: { name: screenshot, path: home.png }

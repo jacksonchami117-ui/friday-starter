@@ -179,6 +179,10 @@ def create_app():
         def health():
             return "ok", 200
 
+        @app.route("/healthz")
+        def healthz():
+            return "ok", 200
+
         @app.route("/media/assets/<path:filename>")
         def media_assets(filename):
             if ADMIN_PASSWORD:
@@ -211,5 +215,15 @@ def create_app():
 app = create_app()
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
+    import argparse
+    parser = argparse.ArgumentParser(description='FRIDAY Flask App')
+    parser.add_argument('--port', type=int, help='Port to run the server on')
+    args = parser.parse_args()
+    
+    # Use command line port if provided, otherwise fall back to environment variable
+    if args.port:
+        port = args.port
+    else:
+        port = int(os.environ.get("PORT", 5000))
+    
     app.run(host="0.0.0.0", port=port)

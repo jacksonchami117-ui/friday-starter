@@ -18,6 +18,7 @@ env:
   AWS_ROLE_DEPLOY: ${{ vars.AWS_ROLE_DEPLOY }}
   ECR_REGISTRY: ${{ vars.ECR_REGISTRY }}
   ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+  STACK_NAME: ${{ vars.STACK_NAME }}
   APP_RUNNER_STACK_NAME: ${{ vars.APP_RUNNER_STACK_NAME }}
   APP_RUNNER_SERVICE_NAME: ${{ vars.APP_RUNNER_SERVICE_NAME }}
   APP_RUNNER_PORT: ${{ vars.APP_RUNNER_PORT }}
@@ -85,15 +86,38 @@ jobs:
               Value: !GetAtt Svc.ServiceUrl
           YAML
 
+      - name: Compute CloudFormation stack name
+        id: stack-name
+        run: |
+          # Use preferred stack name if provided, otherwise compute a safe default
+          STACK_NAME="${{ env.STACK_NAME || env.APP_RUNNER_STACK_NAME }}"
+          if [[ -z "$STACK_NAME" ]]; then
+            # Extract repo name and sanitize for CloudFormation naming rules
+            REPO_NAME="${{ github.repository }}"
+            REPO_NAME="${REPO_NAME##*/}"  # Remove owner prefix
+            REPO_NAME="${REPO_NAME//_/-}"  # Replace underscores with hyphens
+            REPO_NAME="${REPO_NAME//[^a-zA-Z0-9-]/}"  # Keep only letters, numbers, hyphens
+            BRANCH_NAME="${{ github.ref_name }}"
+            BRANCH_NAME="${BRANCH_NAME//[\/\#\_\.]/-}"  # Replace special chars with hyphens
+            BRANCH_NAME="${BRANCH_NAME//[^a-zA-Z0-9-]/}"  # Keep only letters, numbers, hyphens
+            STACK_NAME="apprunner-${REPO_NAME}-${BRANCH_NAME}"
+            # Ensure it starts with a letter and truncate if too long
+            STACK_NAME=$(echo "$STACK_NAME" | sed 's/^[^a-zA-Z]*//')
+            STACK_NAME="${STACK_NAME:0:128}"
+          fi
+          echo "stack_name=$STACK_NAME" >> $GITHUB_OUTPUT
+          echo "Using CloudFormation stack name: $STACK_NAME"
+
       - name: Deploy CloudFormation
         id: cfn
         run: |
+          STACK_NAME="${{ steps.stack-name.outputs.stack_name }}"
           aws cloudformation deploy \
-            --stack-name "$APP_RUNNER_STACK_NAME" \
+            --stack-name "$STACK_NAME" \
             --template-file infra/apprunner.yaml \
             --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
             --no-fail-on-empty-changeset
-          URL=$(aws cloudformation describe-stacks --stack-name "$APP_RUNNER_STACK_NAME" \
+          URL=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" \
             --query 'Stacks[0].Outputs[?OutputKey==`ServiceUrl`].OutputValue' --output text)
           echo "service_url=$URL" >> $GITHUB_OUTPUT
 

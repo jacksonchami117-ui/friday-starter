@@ -34,6 +34,7 @@ jobs:
         env:
           ADMIN_PASSWORD: ci-admin
           FLASK_SECRET_KEY: testkey
+          PORT: 10000
         run: |
           nohup python app.py > server.log 2>&1 &
           echo $! > server.pid
@@ -41,7 +42,9 @@ jobs:
       - name: Wait for health
         run: |
           for i in {1..30}; do
-            curl -fsS http://localhost:10000/healthz && exit 0
+            if curl -fsS http://localhost:10000/healthz || curl -fsS http://localhost:10000/health; then
+              exit 0
+            fi
             sleep 2
           done
           echo "App did not become healthy in time"

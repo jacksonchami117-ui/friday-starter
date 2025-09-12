@@ -88,16 +88,39 @@ jobs:
 
       - name: Compute stack name
         run: |
-          # Prefer STACK_NAME if set, otherwise use APP_RUNNER_STACK_NAME for backward compatibility
-          if [ -n "$STACK_NAME" ]; then
-            echo "STACK_NAME=$STACK_NAME" >> $GITHUB_ENV
-          elif [ -n "$APP_RUNNER_STACK_NAME" ]; then
-            echo "STACK_NAME=$APP_RUNNER_STACK_NAME" >> $GITHUB_ENV
+          # Compute deterministic stack name with fallback logic
+          COMPUTED_STACK_NAME=""
+          
+          # Prefer env.STACK_NAME if set and non-empty
+          if [ -n "${STACK_NAME:-}" ] && [ "${STACK_NAME}" != "" ]; then
+            COMPUTED_STACK_NAME="$STACK_NAME"
+            echo "Using env.STACK_NAME: $COMPUTED_STACK_NAME"
+          # Fallback to vars.APP_RUNNER_STACK_NAME for backward compatibility
+          elif [ -n "${APP_RUNNER_STACK_NAME:-}" ] && [ "${APP_RUNNER_STACK_NAME}" != "" ]; then
+            COMPUTED_STACK_NAME="$APP_RUNNER_STACK_NAME"
+            echo "Using APP_RUNNER_STACK_NAME: $COMPUTED_STACK_NAME"
+          # Generate deterministic default based on repository
           else
-            echo "Error: Neither STACK_NAME nor APP_RUNNER_STACK_NAME is set"
+            REPO_NAME=$(echo "${{ github.repository }}" | cut -d'/' -f2)
+            COMPUTED_STACK_NAME="apprunner-${REPO_NAME}-main"
+            echo "Using computed default: $COMPUTED_STACK_NAME"
+          fi
+          
+          # Ensure stack name is valid (no empty values)
+          if [ -z "$COMPUTED_STACK_NAME" ] || [ "$COMPUTED_STACK_NAME" = "" ]; then
+            echo "❌ Error: Computed stack name is empty"
             exit 1
           fi
-          echo "Using stack name: $STACK_NAME"
+          
+          # Validate stack name format (CloudFormation requirements)
+          if ! echo "$COMPUTED_STACK_NAME" | grep -qE '^[a-zA-Z][-a-zA-Z0-9]*$'; then
+            echo "❌ Error: Stack name '$COMPUTED_STACK_NAME' contains invalid characters"
+            echo "Stack names must start with a letter and contain only letters, numbers, and hyphens"
+            exit 1
+          fi
+          
+          echo "STACK_NAME=$COMPUTED_STACK_NAME" >> $GITHUB_ENV
+          echo "✅ Final stack name: $COMPUTED_STACK_NAME"
 
       - name: Deploy CloudFormation
         id: cfn

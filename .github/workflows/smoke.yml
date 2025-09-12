@@ -35,16 +35,39 @@ jobs:
           ADMIN_PASSWORD: ci-admin
           FLASK_SECRET_KEY: testkey
         run: |
-          nohup python app.py > server.log 2>&1 &
+          nohup python app.py --port 10000 > server.log 2>&1 &
           echo $! > server.pid
 
       - name: Wait for health
         run: |
-          for i in {1..30}; do
-            curl -fsS http://localhost:10000/healthz && exit 0
-            sleep 2
+          echo "Waiting for app to become ready..."
+          MAX_ATTEMPTS=45
+          SLEEP_INTERVAL=2
+          
+          for attempt in $(seq 1 $MAX_ATTEMPTS); do
+            echo "Health check attempt $attempt/$MAX_ATTEMPTS"
+            
+            # Try /healthz first, then fallback to /health for compatibility
+            if curl -fsS --max-time 5 http://localhost:10000/healthz > /dev/null 2>&1; then
+              echo "✅ App is healthy at /healthz"
+              exit 0
+            elif curl -fsS --max-time 5 http://localhost:10000/health > /dev/null 2>&1; then
+              echo "✅ App is healthy at /health"
+              exit 0
+            fi
+            
+            echo "❌ Health check failed, retrying in ${SLEEP_INTERVAL}s..."
+            sleep $SLEEP_INTERVAL
           done
-          echo "App did not become healthy in time"
+          
+          echo "💥 App failed to become healthy after $((MAX_ATTEMPTS * SLEEP_INTERVAL)) seconds"
+          echo "=== Server logs ==="
+          cat server.log || echo "No server logs found"
+          echo "=== Process status ==="
+          if [ -f server.pid ]; then
+            PID=$(cat server.pid)
+            ps -p $PID || echo "Process $PID not running"
+          fi
           exit 1
 
       - name: Run smoke test

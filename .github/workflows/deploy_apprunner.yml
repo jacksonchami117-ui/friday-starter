@@ -1,92 +1,93 @@
-name: Deploy — App Runner (CI-only)
+name: Deploy — App Runner (OIDC via AWS Connector)
+
 on:
-  push: { branches: [ main ] }
-  workflow_dispatch: {}
+  push:
+    branches: [main]
+  workflow_dispatch:
+
 env:
   AWS_REGION: ${{ vars.AWS_REGION }}
   SERVICE_NAME: friday-app
   ENVIRONMENT: production
   ECR_REPO: ${{ vars.ECR_REPOSITORY }}
+  APPRUNNER_ACCESS_ROLE_ARN: ${{ vars.AWS_APPRUNNER_ECR_ACCESS_ROLE }}
+
 jobs:
-  build_and_push:
+  deploy:
     runs-on: ubuntu-latest
-    permissions: { id-token: write, contents: read }
+    permissions:
+      id-token: write
+      contents: read
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Configure AWS (static keys if present)
-        if: ${{ secrets.AWS_ACCESS_KEY_ID != '' && secrets.AWS_SECRET_ACCESS_KEY != '' }}
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region:            ${{ env.AWS_REGION }}
-
-      - name: Configure AWS (OIDC fallback)
-        if: ${{ !(secrets.AWS_ACCESS_KEY_ID != '' && secrets.AWS_SECRET_ACCESS_KEY != '') }}
+      - name: Configure AWS (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ vars.AWS_ROLE_DEPLOY }}
-          aws-region:    ${{ env.AWS_REGION }}
+          aws-region: ${{ env.AWS_REGION }}
 
-      - id: ecr
+      - name: Login to Amazon ECR
+        id: ecr
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Build and push image
         env:
           REG: ${{ steps.ecr.outputs.registry }}
+          IMG_REPO: ${{ env.ECR_REPO }}
+          IMG_TAG: ${{ github.sha }}
           IMG: ${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPO }}:${{ github.sha }}
         run: |
           set -euo pipefail
-          aws ecr describe-repositories --repository-names "${ECR_REPO}" || aws ecr create-repository --repository-name "${ECR_REPO}"
+          aws ecr describe-repositories --repository-names "${ECR_REPO}" \
+            >/dev/null 2>&1 || \
+            aws ecr create-repository --repository-name "${ECR_REPO}" \
+            >/dev/null
           docker build -t "$IMG" .
           docker push "$IMG"
 
-      - name: Ensure App Runner ECR access role
-        id: apprunner_role
-        run: |
-          set -euo pipefail
-          ROLE_NAME=FridayAppRunnerECRAccess
-          if ! aws iam get-role --role-name "$ROLE_NAME" >/dev/null 2>&1; then
-            aws iam create-role --role-name "$ROLE_NAME" --assume-role-policy-document '{
-              "Version":"2012-10-17","Statement":[
-                {"Effect":"Allow","Principal":{"Service":"build.apprunner.amazonaws.com"},"Action":"sts:AssumeRole"},
-                {"Effect":"Allow","Principal":{"Service":"tasks.apprunner.amazonaws.com"},"Action":"sts:AssumeRole"}]}'
-            aws iam attach-role-policy --role-name "$ROLE_NAME" --policy-arn arn:aws:iam::aws:policy/service-role/AWSAppRunnerServicePolicyForECRAccess || true
-          fi
-          echo "ROLE_ARN=$(aws iam get-role --role-name "$ROLE_NAME" --query 'Role.Arn' --output text)" >> $GITHUB_OUTPUT
-
-      - name: Create/Update App Runner service
+      - name: Create or update App Runner service
         id: apprunner
         env:
-          REG:      ${{ steps.ecr.outputs.registry }}
-          IMG_TAG:  ${{ github.sha }}
-          ROLE_ARN: ${{ steps.apprunner_role.outputs.ROLE_ARN }}
+          REG: ${{ steps.ecr.outputs.registry }}
+          IMG_TAG: ${{ github.sha }}
         run: |
           set -euo pipefail
+
           SVC_NAME="${SERVICE_NAME}-${ENVIRONMENT}"
           IMAGE_URI="${REG}/${ECR_REPO}:${IMG_TAG}"
-          SVC_ARN=$(aws apprunner list-services --query "ServiceSummaryList[?ServiceName=='${SVC_NAME}'].ServiceArn" --output text)
-          if [ -z "$SVC_ARN" ] || [ "$SVC_ARN" = "None" ]; then
-            SVC_ARN=$(aws apprunner create-service --service-name "$SVC_NAME" \
-              --source-configuration "ImageRepository={ImageIdentifier=${IMAGE_URI},ImageRepositoryType=ECR,ImageConfiguration={Port=5000}},AuthenticationConfiguration={AccessRoleArn=${ROLE_ARN}}" \
-              --query 'Service.ServiceArn' --output text)
-          else
-            aws apprunner update-service --service-arn "$SVC_ARN" \
-              --source-configuration "ImageRepository={ImageIdentifier=${IMAGE_URI},ImageRepositoryType=ECR,ImageConfiguration={Port=5000}},AuthenticationConfiguration={AccessRoleArn=${ROLE_ARN}}"
-          fi
-          echo "SVC_ARN=$SVC_ARN" >> $GITHUB_OUTPUT
 
-      - name: Wait and smoke test
+          # Find existing service
+          SVC_ARN="$(aws apprunner list-services \
+            --query "ServiceSummaryList[?ServiceName=='${SVC_NAME}'].ServiceArn" \
+            --output text)"
+
+          SRC_CFG="ImageRepository={ImageIdentifier=${IMAGE_URI},"
+          SRC_CFG="${SRC_CFG}ImageRepositoryType=ECR,"
+          SRC_CFG="${SRC_CFG}ImageConfiguration={Port=5000}},"
+          SRC_CFG="${SRC_CFG}AuthenticationConfiguration={AccessRoleArn=${APPRUNNER_ACCESS_ROLE_ARN}}"
+
+          if [ -z "$SVC_ARN" ] || [ "$SVC_ARN" = "None" ]; then
+            echo "Creating App Runner service: $SVC_NAME"
+            SVC_ARN="$(aws apprunner create-service \
+              --service-name "$SVC_NAME" \
+              --source-configuration "$SRC_CFG" \
+              --query 'Service.ServiceArn' --output text)"
+          else
+            echo "Updating App Runner service: $SVC_NAME"
+            aws apprunner update-service \
+              --service-arn "$SVC_ARN" \
+              --source-configuration "$SRC_CFG" >/dev/null
+          fi
+
+          echo "SVC_ARN=$SVC_ARN" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for deploy and print URL
         run: |
           ARN="${{ steps.apprunner.outputs.SVC_ARN }}"
           aws apprunner wait service-deployed --service-arn "$ARN"
-          URL=$(aws apprunner describe-service --service-arn "$ARN" --query 'Service.ServiceUrl' --output text)
+          URL="$(aws apprunner describe-service --service-arn "$ARN" \
+            --query 'Service.ServiceUrl' --output text)"
           echo "SERVICE_URL=$URL"
-          curl -fsS "$URL/health" -o health.txt || true
-
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: deploy-artifacts
-          path: health.txt

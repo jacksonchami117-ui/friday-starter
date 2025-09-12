@@ -11,19 +11,22 @@ jobs:
   build_and_push:
     runs-on: ubuntu-latest
     permissions: { id-token: write, contents: read }
+    env:
+      AKID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      ASEC: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
     steps:
       - uses: actions/checkout@v4
 
       - name: Configure AWS (static keys if present)
-        if: ${{ secrets.AWS_ACCESS_KEY_ID != '' && secrets.AWS_SECRET_ACCESS_KEY != '' }}
+        if: ${{ env.AKID != '' && env.ASEC != '' }}
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-access-key-id:     ${{ env.AKID }}
+          aws-secret-access-key: ${{ env.ASEC }}
           aws-region:            ${{ env.AWS_REGION }}
 
       - name: Configure AWS (OIDC fallback)
-        if: ${{ !(secrets.AWS_ACCESS_KEY_ID != '' && secrets.AWS_SECRET_ACCESS_KEY != '') }}
+        if: ${{ !(env.AKID != '' && env.ASEC != '') }}
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ vars.AWS_ROLE_DEPLOY }}

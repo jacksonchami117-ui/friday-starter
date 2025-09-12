@@ -1,147 +1,92 @@
 name: Deploy — App Runner (CI-only)
-
 on:
+  push: { branches: [ main ] }
   workflow_dispatch: {}
-  push:
-    branches: [main]
-
-permissions:
-  id-token: write
-  contents: read
-
-concurrency:
-  group: deploy-apprunner-${{ github.ref }}
-  cancel-in-progress: true
-
 env:
   AWS_REGION: ${{ vars.AWS_REGION }}
-  AWS_ROLE_DEPLOY: ${{ vars.AWS_ROLE_DEPLOY }}
-  ECR_REGISTRY: ${{ vars.ECR_REGISTRY }}
-  ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
-  STACK_NAME: apprunner-friday-starter-prod
-  APP_RUNNER_STACK_NAME: ${{ vars.APP_RUNNER_STACK_NAME }}
-  APP_RUNNER_SERVICE_NAME: ${{ vars.APP_RUNNER_SERVICE_NAME }}
-  APP_RUNNER_PORT: ${{ vars.APP_RUNNER_PORT }}
-
+  SERVICE_NAME: friday-app
+  ENVIRONMENT: production
+  ECR_REPO: ${{ vars.ECR_REPOSITORY }}
 jobs:
   build_and_push:
     runs-on: ubuntu-latest
-    outputs:
-      service_url: ${{ steps.cfn.outputs.service_url }}
+    permissions: { id-token: write, contents: read }
     steps:
       - uses: actions/checkout@v4
 
-      - name: Configure AWS (OIDC)
+      - name: Configure AWS (static keys if present)
+        if: ${{ secrets.AWS_ACCESS_KEY_ID != '' && secrets.AWS_SECRET_ACCESS_KEY != '' }}
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ env.AWS_ROLE_DEPLOY }}
-          aws-region: ${{ env.AWS_REGION }}
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region:            ${{ env.AWS_REGION }}
 
-      - name: Login to ECR
+      - name: Configure AWS (OIDC fallback)
+        if: ${{ !(secrets.AWS_ACCESS_KEY_ID != '' && secrets.AWS_SECRET_ACCESS_KEY != '') }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_DEPLOY }}
+          aws-region:    ${{ env.AWS_REGION }}
+
+      - id: ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build & push image
+      - name: Build and push image
         env:
-          IMAGE: ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+          REG: ${{ steps.ecr.outputs.registry }}
+          IMG: ${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPO }}:${{ github.sha }}
         run: |
-          docker build --build-arg APP_VERSION=${{ github.sha }} -t "$IMAGE" .
-          docker push "$IMAGE"
+          set -euo pipefail
+          aws ecr describe-repositories --repository-names "${ECR_REPO}" || aws ecr create-repository --repository-name "${ECR_REPO}"
+          docker build -t "$IMG" .
+          docker push "$IMG"
 
-      - name: Write App Runner template
-        env:
-          PORT: ${{ env.APP_RUNNER_PORT }}
+      - name: Ensure App Runner ECR access role
+        id: apprunner_role
         run: |
-          PORT=${PORT:-5000}
-          mkdir -p infra
-          cat > infra/apprunner.yaml <<YAML
-          AWSTemplateFormatVersion: '2010-09-09'
-          Resources:
-            Svc:
-              Type: AWS::AppRunner::Service
-              Properties:
-                ServiceName: ${APP_RUNNER_SERVICE_NAME}
-                SourceConfiguration:
-                  AutoDeploymentsEnabled: true
-                  ImageRepository:
-                    ImageIdentifier: ${ECR_REGISTRY}/${ECR_REPOSITORY}:${{ github.sha }}
-                    ImageRepositoryType: ECR
-                    ImageConfiguration:
-                      Port: '${PORT}'
-                      RuntimeEnvironmentVariables:
-                        - Name: AUTO_START
-                          Value: 'true'
-                        - Name: APP_VERSION
-                          Value: '${{ github.sha }}'
-                  AuthenticationConfiguration:
-                    AccessRoleArn: ${AWS_ROLE_DEPLOY}
-                HealthCheckConfiguration:
-                  Protocol: HTTP
-                  Path: /healthz
-                  Interval: 10
-                  Timeout: 5
-                  HealthyThreshold: 1
-                  UnhealthyThreshold: 3
-          Outputs:
-            ServiceUrl:
-              Value: !GetAtt Svc.ServiceUrl
-          YAML
-
-      - name: Compute stack name
-        run: |
-          # Prefer STACK_NAME if set, otherwise use APP_RUNNER_STACK_NAME for backward compatibility
-          if [ -n "$STACK_NAME" ]; then
-            echo "STACK_NAME=$STACK_NAME" >> $GITHUB_ENV
-          elif [ -n "$APP_RUNNER_STACK_NAME" ]; then
-            echo "STACK_NAME=$APP_RUNNER_STACK_NAME" >> $GITHUB_ENV
-          else
-            echo "Error: Neither STACK_NAME nor APP_RUNNER_STACK_NAME is set"
-            exit 1
+          set -euo pipefail
+          ROLE_NAME=FridayAppRunnerECRAccess
+          if ! aws iam get-role --role-name "$ROLE_NAME" >/dev/null 2>&1; then
+            aws iam create-role --role-name "$ROLE_NAME" --assume-role-policy-document '{
+              "Version":"2012-10-17","Statement":[
+                {"Effect":"Allow","Principal":{"Service":"build.apprunner.amazonaws.com"},"Action":"sts:AssumeRole"},
+                {"Effect":"Allow","Principal":{"Service":"tasks.apprunner.amazonaws.com"},"Action":"sts:AssumeRole"}]}'
+            aws iam attach-role-policy --role-name "$ROLE_NAME" --policy-arn arn:aws:iam::aws:policy/service-role/AWSAppRunnerServicePolicyForECRAccess || true
           fi
-          echo "Using stack name: $STACK_NAME"
+          echo "ROLE_ARN=$(aws iam get-role --role-name "$ROLE_NAME" --query 'Role.Arn' --output text)" >> $GITHUB_OUTPUT
 
-      - name: Deploy CloudFormation
-        id: cfn
-        run: |
-          aws cloudformation deploy \
-            --stack-name "$STACK_NAME" \
-            --template-file infra/apprunner.yaml \
-            --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
-            --no-fail-on-empty-changeset
-          URL=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" \
-            --query 'Stacks[0].Outputs[?OutputKey==`ServiceUrl`].OutputValue' --output text)
-          echo "service_url=$URL" >> $GITHUB_OUTPUT
-
-  smoke_and_screenshot:
-    needs: build_and_push
-    runs-on: ubuntu-latest
-    steps:
-      - name: Wait for readiness
+      - name: Create/Update App Runner service
+        id: apprunner
         env:
-          URL: ${{ needs.build_and_push.outputs.service_url }}
+          REG:      ${{ steps.ecr.outputs.registry }}
+          IMG_TAG:  ${{ github.sha }}
+          ROLE_ARN: ${{ steps.apprunner_role.outputs.ROLE_ARN }}
         run: |
-          for i in {1..60}; do
-            code=$(curl -s -o /dev/null -w '%{http_code}' "$URL/healthz" || true)
-            [ "$code" = "200" ] && exit 0
-            sleep 5
-          done
-          exit 1
+          set -euo pipefail
+          SVC_NAME="${SERVICE_NAME}-${ENVIRONMENT}"
+          IMAGE_URI="${REG}/${ECR_REPO}:${IMG_TAG}"
+          SVC_ARN=$(aws apprunner list-services --query "ServiceSummaryList[?ServiceName=='${SVC_NAME}'].ServiceArn" --output text)
+          if [ -z "$SVC_ARN" ] || [ "$SVC_ARN" = "None" ]; then
+            SVC_ARN=$(aws apprunner create-service --service-name "$SVC_NAME" \
+              --source-configuration "ImageRepository={ImageIdentifier=${IMAGE_URI},ImageRepositoryType=ECR,ImageConfiguration={Port=5000}},AuthenticationConfiguration={AccessRoleArn=${ROLE_ARN}}" \
+              --query 'Service.ServiceArn' --output text)
+          else
+            aws apprunner update-service --service-arn "$SVC_ARN" \
+              --source-configuration "ImageRepository={ImageIdentifier=${IMAGE_URI},ImageRepositoryType=ECR,ImageConfiguration={Port=5000}},AuthenticationConfiguration={AccessRoleArn=${ROLE_ARN}}"
+          fi
+          echo "SVC_ARN=$SVC_ARN" >> $GITHUB_OUTPUT
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install Playwright
+      - name: Wait and smoke test
         run: |
-          npm -g i playwright@1
-          npx playwright install --with-deps
-
-      - name: Screenshot home
-        env:
-          URL: ${{ needs.build_and_push.outputs.service_url }}
-        run: |
-          node -e "const {chromium}=require('playwright');(async()=>{const b=await chromium.launch();const p=await b.newPage();await p.goto(process.env.URL,{waitUntil:'domcontentloaded'});await p.screenshot({path:'home.png',fullPage:true});await b.close();})();"
+          ARN="${{ steps.apprunner.outputs.SVC_ARN }}"
+          aws apprunner wait service-deployed --service-arn "$ARN"
+          URL=$(aws apprunner describe-service --service-arn "$ARN" --query 'Service.ServiceUrl' --output text)
+          echo "SERVICE_URL=$URL"
+          curl -fsS "$URL/health" -o health.txt || true
 
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: screenshot
-          path: home.png
+          name: deploy-artifacts
+          path: health.txt

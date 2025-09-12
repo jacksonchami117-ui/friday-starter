@@ -1,7 +1,10 @@
 on:
 jobs:
-name: Deploy FRIDAY to Render
-on: { push: { branches: [main] } }
+name: Deploy FRIDAY to Render (DISABLED - use deploy_apprunner.yml)
+on:
+  # Disabled - conflicts with deploy_apprunner.yml
+  # push: { branches: [main] }
+  workflow_dispatch: {}
 jobs:
   deploy:
     runs-on: ubuntu-latest

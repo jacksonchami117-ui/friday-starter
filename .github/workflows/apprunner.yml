@@ -1,0 +1,80 @@
+name: Reusable — App Runner deploy
+on:
+  workflow_call:
+    inputs:
+      service_name: { required: true, type: string }
+      ecr_repo:     { required: true, type: string }
+      env_name:     { required: false, type: string, default: production }
+      port:         { required: false, type: number,  default: 5000 }
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions: { id-token: write, contents: read }
+    env:
+      AWS_REGION:   ${{ vars.AWS_REGION }}
+      AWS_ROLE_ARN: ${{ vars.AWS_ROLE_DEPLOY }}
+      SERVICE_NAME: ${{ inputs.service_name }}
+      ENVIRONMENT:  ${{ inputs.env_name }}
+      ECR_REPO:     ${{ inputs.ecr_repo }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+      - name: Build and push image
+        env:
+          REG: ${{ steps.ecr.outputs.registry }}
+          IMG: ${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPO }}:${{ github.sha }}
+        run: |
+          set -euo pipefail
+          aws ecr describe-repositories --repository-names "${ECR_REPO}" || aws ecr create-repository --repository-name "${ECR_REPO}"
+          docker build -t "$IMG" .
+          docker push "$IMG"
+      - name: Ensure App Runner ECR access role
+        id: apprunner_role
+        run: |
+          set -euo pipefail
+          NAME=FridayAppRunnerECRAccess
+          aws iam get-role --role-name "$NAME" >/dev/null 2>&1 || {
+            aws iam create-role --role-name "$NAME" --assume-role-policy-document '{
+              "Version":"2012-10-17","Statement":[
+                {"Effect":"Allow","Principal":{"Service":"build.apprunner.amazonaws.com"},"Action":"sts:AssumeRole"},
+                {"Effect":"Allow","Principal":{"Service":"tasks.apprunner.amazonaws.com"},"Action":"sts:AssumeRole"}]}'
+            aws iam attach-role-policy --role-name "$NAME" \
+              --policy-arn arn:aws:iam::aws:policy/service-role/AWSAppRunnerServicePolicyForECRAccess
+          }
+          echo "ROLE_ARN=$(aws iam get-role --role-name "$NAME" --query 'Role.Arn' --output text)" >> $GITHUB_OUTPUT
+      - name: Create/Update App Runner service
+        id: apprunner
+        env:
+          REG:      ${{ steps.ecr.outputs.registry }}
+          IMG_TAG:  ${{ github.sha }}
+          ACCESS_ARN: ${{ steps.apprunner_role.outputs.ROLE_ARN }}
+        run: |
+          set -euo pipefail
+          SVC_NAME="${SERVICE_NAME}-${ENVIRONMENT}"
+          IMAGE_URI="${REG}/${ECR_REPO}:${IMG_TAG}"
+          SVC_ARN=$(aws apprunner list-services --query "ServiceSummaryList[?ServiceName=='${SVC_NAME}'].ServiceArn" --output text)
+          if [ -z "$SVC_ARN" ] || [ "$SVC_ARN" = "None" ]; then
+            SVC_ARN=$(aws apprunner create-service \
+              --service-name "$SVC_NAME" \
+              --source-configuration "ImageRepository={ImageIdentifier=${IMAGE_URI},ImageRepositoryType=ECR,ImageConfiguration={Port=${{ inputs.port }}}},AuthenticationConfiguration={AccessRoleArn=${ACCESS_ARN}}" \
+              --query 'Service.ServiceArn' --output text)
+          else
+            aws apprunner update-service \
+              --service-arn "$SVC_ARN" \
+              --source-configuration "ImageRepository={ImageIdentifier=${IMAGE_URI},ImageRepositoryType=ECR,ImageConfiguration={Port=${{ inputs.port }}}},AuthenticationConfiguration={AccessRoleArn=${ACCESS_ARN}}"
+          fi
+          echo "SVC_ARN=$SVC_ARN" >> $GITHUB_OUTPUT
+      - name: Wait & smoke test
+        run: |
+          aws apprunner wait service-deployed --service-arn "${{ steps.apprunner.outputs.SVC_ARN }}"
+          URL=$(aws apprunner describe-service --service-arn "${{ steps.apprunner.outputs.SVC_ARN }}" --query 'Service.ServiceUrl' --output text)
+          echo "SERVICE_URL=$URL"
+          curl -fsS "$URL/health" -o health.txt || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: deploy-artifacts, path: health.txt }

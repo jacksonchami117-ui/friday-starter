@@ -1,33 +1,15 @@
-name: Deploy FRIDAY to Render (DISABLED - use deploy_apprunner.yml)
+name: Deploy — App Runner (CI-only)
 on:
-  # Disabled - conflicts with deploy_apprunner.yml
-  # push: { branches: [main] }
+  push: { branches: [ main ] }
   workflow_dispatch: {}
+  repository_dispatch:
+    types: [deploy]
 jobs:
   deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-        with: { lfs: true }
-      - run: git lfs pull
-      - run: pip install -r requirements.txt
-      - run: npm install && npm run build
-      - run: |
-          pytest -q || exit 1
-          python scripts/smoke_test.py || exit 1
-      - uses: actions/upload-artifact@v3
-        with:
-          name: Deploy FRIDAY to Render
-          path: |
-            logs/**
-            state/outputs/**
-            test-data/**
-            test-data-summary/**
-            static/**
-      - run: |
-          curl -s -X POST \
-            -H "Accept: application/json" \
-            -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
-            -H "Content-Type: application/json" \
-            -d '{"clearCache":true}' \
-            https://api.render.com/v1/services/${{ secrets.RENDER_SERVICE_ID }}/deploys
+    uses: jacksonchami117-ui/friday-starter/.github/workflows/apprunner.yml@main
+    with:
+      service_name: friday-starter
+      ecr_repo: ${{ vars.ECR_REPOSITORY }}
+      env_name: production
+      port: 5000
+    permissions: { id-token: write, contents: read }

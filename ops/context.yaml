@@ -1,0 +1,9 @@
+# Non-secret CI context (documented IDs)
+org: jacksonchami117-ui
+app_repo: friday-starter
+aws_region: us-east-1           # set to match org variable AWS_REGION
+aws_role_deploy: arn:aws:iam::<ACCOUNT_ID>:role/FridayDeployRole
+ecr_repository: friday-starter  # set repo variable ECR_REPOSITORY
+trust_policy:
+  audience: sts.amazonaws.com
+  sub_filter: repo:jacksonchami117-ui/*:ref:refs/heads/main

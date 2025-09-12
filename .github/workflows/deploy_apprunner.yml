@@ -1,6 +1,6 @@
 name: Deploy — App Runner (OIDC via AWS Connector)
 
-on:
+"on":
   push:
     branches: [main]
   workflow_dispatch:

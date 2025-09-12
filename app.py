@@ -2,6 +2,7 @@ import os
 import time
 import logging
 import sys
+import argparse
 from logging.handlers import RotatingFileHandler
 
 import click
@@ -179,6 +180,10 @@ def create_app():
         def health():
             return "ok", 200
 
+        @app.route("/healthz")
+        def healthz():
+            return "ok", 200
+
         @app.route("/media/assets/<path:filename>")
         def media_assets(filename):
             if ADMIN_PASSWORD:
@@ -211,5 +216,15 @@ def create_app():
 app = create_app()
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
+    # Add CLI argument parsing
+    parser = argparse.ArgumentParser(description="Friday Starter Flask Application")
+    parser.add_argument("--port", type=int, help="Port to bind to")
+    args = parser.parse_args()
+    
+    # Use --port argument if provided, otherwise fall back to PORT environment variable
+    if args.port:
+        port = args.port
+    else:
+        port = int(os.environ.get("PORT", 5000))
+    
     app.run(host="0.0.0.0", port=port)

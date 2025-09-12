@@ -12,6 +12,12 @@ def test_health(client):
     assert r.status_code == 200
     assert b"ok" in r.data
 
+def test_healthz(client):
+    r = client.get("/healthz")
+    assert r.status_code == 200
+    assert b"ok" in r.data
+
+
 def test_home(client):
     assert client.get("/home").status_code == 200
 

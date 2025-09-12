@@ -1,0 +1,59 @@
+name-template: 'v$NEXT_PATCH_VERSION'
+tag-template: 'v$NEXT_PATCH_VERSION'
+
+categories:
+  - title: '🚀 Features'
+    labels:
+      - 'feature'
+      - 'enhancement'
+  - title: '🐛 Bug Fixes'
+    labels:
+      - 'fix'
+      - 'bugfix'
+      - 'bug'
+  - title: '🔒 Security'
+    labels:
+      - 'security'
+  - title: '📦 Dependencies'
+    labels:
+      - 'dependencies'
+      - 'deps'
+  - title: '🔧 Maintenance'
+    labels:
+      - 'chore'
+      - 'maintenance'
+
+change-template: '- $TITLE @$AUTHOR (#$NUMBER)'
+change-title-escapes: '\<*_&' # You can add # and @ to disable mentions
+
+template: |
+  ## Changes
+
+  $CHANGES
+
+  ## Contributors
+
+  Thanks to all contributors who made this release possible!
+
+exclude-labels:
+  - 'skip-changelog'
+  - 'duplicate'
+  - 'invalid'
+  - 'wontfix'
+
+autolabeler:
+  - label: 'feature'
+    title:
+      - '/^feat(\(.+\))?\!?:.+/'
+  - label: 'fix'
+    title:
+      - '/^fix(\(.+\))?\!?:.+/'
+  - label: 'chore'
+    title:
+      - '/^chore(\(.+\))?\!?:.+/'
+  - label: 'security'
+    title:
+      - '/^security(\(.+\))?\!?:.+/'
+  - label: 'dependencies'
+    title:
+      - '/^(fix|chore)\(deps\)/'

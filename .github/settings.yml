@@ -1,0 +1,132 @@
+# Repository settings configuration
+# This file is managed by the Settings GitHub App
+# Changes take effect when the Settings app is installed and configured
+
+repository:
+  # General repository settings
+  name: friday-starter
+  description: "FRIDAY Starter - Video rendering and campaign management platform"
+  homepage: ""
+  topics: ["flask", "python", "video-rendering", "ffmpeg", "celery", "redis"]
+  private: false
+  has_issues: true
+  has_projects: true
+  has_wiki: false
+  has_downloads: true
+  default_branch: main
+  allow_squash_merge: true
+  allow_merge_commit: false
+  allow_rebase_merge: false
+  delete_branch_on_merge: true
+  enable_automated_security_fixes: true
+  enable_vulnerability_alerts: true
+
+# Branch protection rules
+branches:
+  - name: main
+    protection:
+      required_status_checks:
+        strict: true
+        contexts:
+          - "build"
+          - "coverage" 
+          - "sonar"
+          - "trivy"
+      enforce_admins: false
+      required_pull_request_reviews:
+        required_approving_review_count: 1
+        dismiss_stale_reviews: true
+        require_code_owner_reviews: false
+        restriction_dismissal_options:
+          users: []
+          teams: []
+      restrictions:
+        users: []
+        teams: []
+        apps: []
+      required_linear_history: false
+      allow_force_pushes: false
+      allow_deletions: false
+      required_conversation_resolution: true
+      require_signed_commits: true
+
+# Labels for issue and PR management
+labels:
+  # Type labels
+  - name: "bug"
+    color: "d73a4a"
+    description: "Something isn't working"
+  - name: "feature"
+    color: "a2eeef"
+    description: "New feature or request"
+  - name: "enhancement"
+    color: "a2eeef"
+    description: "Improvement to existing feature"
+  - name: "documentation"
+    color: "0075ca"
+    description: "Improvements or additions to documentation"
+  - name: "chore"
+    color: "fef2c0"
+    description: "Maintenance tasks"
+  - name: "security"
+    color: "ee0701"
+    description: "Security-related changes"
+  
+  # Priority labels
+  - name: "priority: low"
+    color: "c2e0c6"
+    description: "Low priority issue"
+  - name: "priority: medium"
+    color: "fbca04"
+    description: "Medium priority issue"
+  - name: "priority: high"
+    color: "ff9500"
+    description: "High priority issue"
+  - name: "priority: critical"
+    color: "d93f0b"
+    description: "Critical priority issue"
+    
+  # Component labels
+  - name: "backend"
+    color: "7057ff"
+    description: "Backend/API related"
+  - name: "frontend"
+    color: "57c4f0"
+    description: "Frontend/UI related"
+  - name: "dependencies"
+    color: "0366d6"
+    description: "Dependencies update"
+  - name: "ci"
+    color: "28a745"
+    description: "CI/CD related"
+  - name: "tests"
+    color: "f9d0c4"
+    description: "Test related changes"
+    
+  # Status labels
+  - name: "good first issue"
+    color: "7057ff"
+    description: "Good for newcomers"
+  - name: "help wanted"
+    color: "008672"
+    description: "Extra attention is needed"
+  - name: "duplicate"
+    color: "cfd3d7"
+    description: "This issue or pull request already exists"
+  - name: "invalid"
+    color: "e4e669"
+    description: "This doesn't seem right"
+  - name: "wontfix"
+    color: "ffffff"
+    description: "This will not be worked on"
+  - name: "major-update"
+    color: "d93f0b"
+    description: "Major version update that needs review"
+
+# Environments (optional - for deployment gates)
+# environments:
+#   - name: production
+#     wait_timer: 5
+#     reviewers:
+#       - users: []
+#         teams: []

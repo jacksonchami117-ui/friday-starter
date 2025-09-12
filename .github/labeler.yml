@@ -1,0 +1,64 @@
+# Auto-labeler configuration
+# Labels are applied based on file path patterns
+
+documentation:
+  - '**/*.md'
+  - 'docs/**/*'
+  - 'README*'
+  - 'CHANGELOG*'
+  - 'LICENSE*'
+
+tests:
+  - 'tests/**/*'
+  - '**/*test.py'
+  - '**/*_test.py'
+  - '**/test_*.py'
+  - '**/*spec.py'
+
+ci:
+  - '.github/**/*'
+  - '.gitlab-ci.yml'
+  - 'Jenkinsfile'
+  - '*.yml'
+  - '*.yaml'
+  - 'Dockerfile*'
+  - 'docker-compose*'
+  - '.dockerignore'
+
+dependencies:
+  - 'requirements*.txt'
+  - 'requirements*.lock'
+  - 'package*.json'
+  - 'yarn.lock'
+  - 'Pipfile*'
+  - 'pyproject.toml'
+  - 'setup.py'
+  - 'setup.cfg'
+
+backend:
+  - 'src/**/*'
+  - 'app.py'
+  - '**/*.py'
+  - 'celery_worker.py'
+  - 'migrations/**/*'
+
+frontend:
+  - 'static/**/*'
+  - 'templates/**/*'
+  - '**/*.js'
+  - '**/*.css'
+  - '**/*.html'
+  - '**/*.scss'
+  - '**/*.sass'
+
+config:
+  - '*.json'
+  - '*.yaml'
+  - '*.yml'
+  - '*.toml'
+  - '*.ini'
+  - '*.cfg'
+  - '.env*'
+  - 'alembic.ini'
+  - 'codecov.yml'
+  - 'sonar-project.properties'

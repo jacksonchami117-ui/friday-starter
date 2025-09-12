@@ -1,6 +1,0 @@
-CSVs:
-  - rejected_leads.csv
-  - render_progress.csv
-  - accepted_leads.csv
-Manifests:
-  - templates/manifest.json

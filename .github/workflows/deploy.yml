@@ -1,7 +1,8 @@
+name: Deploy FRIDAY to Render (DISABLED - use deploy_apprunner.yml)
 on:
-jobs:
-name: Deploy FRIDAY to Render
-on: { push: { branches: [main] } }
+  # Disabled - conflicts with deploy_apprunner.yml
+  # push: { branches: [main] }
+  workflow_dispatch: {}
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -16,12 +17,9 @@ jobs:
           python scripts/smoke_test.py || exit 1
       - uses: actions/upload-artifact@v3
         with:
+          name: Deploy FRIDAY to Render
+          path: |
             logs/**
-        name: Deploy FRIDAY to Render
-        on:
-          push:
-            branches: [ main ]
-
             state/outputs/**
             test-data/**
             test-data-summary/**

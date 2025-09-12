@@ -23,9 +23,9 @@ RUN pip install --upgrade pip setuptools wheel && pip install --no-cache-dir -r 
 # Copy the rest of the app
 COPY . .
 
-ENV PORT=8000
+ENV PORT=5000
 ENV STATE_DIR=/data/state
 VOLUME ["/data"]
-EXPOSE 10000
+EXPOSE 5000
 
-CMD ["sh","-c","exec gunicorn app:app -w 1 -k gthread --threads 8 --timeout 240 -b 0.0.0.0:${PORT:-10000}"]
+CMD ["sh","-c","exec gunicorn app:app -w 1 -k gthread --threads 8 --timeout 240 -b 0.0.0.0:${PORT:-5000}"]

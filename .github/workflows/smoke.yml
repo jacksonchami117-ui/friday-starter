@@ -41,7 +41,7 @@ jobs:
       - name: Wait for health
         run: |
           for i in {1..30}; do
-            curl -fsS http://localhost:10000/healthz && exit 0
+            curl -fsS http://localhost:5000/healthz && exit 0
             sleep 2
           done
           echo "App did not become healthy in time"
@@ -49,7 +49,7 @@ jobs:
 
       - name: Run smoke test
         env:
-          BASE_URL: http://localhost:10000
+          BASE_URL: http://localhost:5000
           ADMIN_PASSWORD: ci-admin
         run: |
           python scripts/smoke_test.py

@@ -179,6 +179,10 @@ def create_app():
         def health():
             return "ok", 200
 
+        @app.route("/healthz")
+        def healthz():
+            return "ok", 200
+
         @app.route("/media/assets/<path:filename>")
         def media_assets(filename):
             if ADMIN_PASSWORD:

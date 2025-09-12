@@ -1,0 +1,41 @@
+name: Security scan (Snyk)
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  snyk:
+    name: Snyk scan (code + container)
+    runs-on: ubuntu-latest
+    if: ${{ secrets.SNYK_TOKEN != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Snyk test (Node)
+        if: hashFiles('package.json') != ''
+        uses: snyk/actions/node@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high --exclude=dist,node_modules
+        continue-on-error: true
+
+      - name: Build Docker image
+        if: hashFiles('Dockerfile') != ''
+        run: docker build -t localimage:${{ github.sha }} .
+
+      - name: Snyk container test
+        if: hashFiles('Dockerfile') != ''
+        uses: snyk/actions/docker@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          image: localimage:${{ github.sha }}
+          args: --severity-threshold=high
+        continue-on-error: true

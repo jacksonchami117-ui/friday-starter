@@ -1,0 +1,13 @@
+name: /deploy
+on:
+  issue_comment:
+    types: [created]
+jobs:
+  dispatch:
+    if: github.event.issue.pull_request == null && contains(github.event.comment.body, '/deploy')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.GH_WORKFLOW_TOKEN }}
+          event-type: deploy

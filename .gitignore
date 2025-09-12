@@ -75,3 +75,4 @@ state/uploads/*
 state/outputs/*
 !state/uploads/.gitkeep
 !state/outputs/.gitkeep
+coverage.xml

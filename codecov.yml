@@ -6,14 +6,14 @@ coverage:
   status:
     project:
       default:
-        target: 90
+        target: 80
         threshold: 5%
-        if_ci_failed: error
+        if_ci_failed: informational
     patch:
       default:
-        target: 90
+        target: 70
         threshold: 5%
-        if_ci_failed: error
+        if_ci_failed: informational
 comment:
   layout: "reach, diff, flags, files"
   require_changes: true

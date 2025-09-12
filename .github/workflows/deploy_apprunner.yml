@@ -88,26 +88,41 @@ jobs:
 
       - name: Compute stack name
         run: |
-          # Prefer STACK_NAME if set, otherwise use APP_RUNNER_STACK_NAME for backward compatibility
-          if [ -n "$STACK_NAME" ]; then
-            echo "STACK_NAME=$STACK_NAME" >> $GITHUB_ENV
-          elif [ -n "$APP_RUNNER_STACK_NAME" ]; then
-            echo "STACK_NAME=$APP_RUNNER_STACK_NAME" >> $GITHUB_ENV
+          # Precedence: env.STACK_NAME, then vars.STACK_NAME, then vars.APP_RUNNER_STACK_NAME (backward compatibility), else deterministic default
+          COMPUTED_STACK_NAME=""
+          
+          if [ -n "${STACK_NAME:-}" ]; then
+            COMPUTED_STACK_NAME="$STACK_NAME"
+            echo "Using env.STACK_NAME: $COMPUTED_STACK_NAME"
+          elif [ -n "${{ vars.STACK_NAME }}" ]; then
+            COMPUTED_STACK_NAME="${{ vars.STACK_NAME }}"
+            echo "Using vars.STACK_NAME: $COMPUTED_STACK_NAME"
+          elif [ -n "${{ vars.APP_RUNNER_STACK_NAME }}" ]; then
+            COMPUTED_STACK_NAME="${{ vars.APP_RUNNER_STACK_NAME }}"
+            echo "Using vars.APP_RUNNER_STACK_NAME (backward compatibility): $COMPUTED_STACK_NAME"
           else
-            echo "Error: Neither STACK_NAME nor APP_RUNNER_STACK_NAME is set"
+            COMPUTED_STACK_NAME="apprunner-friday-starter-$(echo '${{ github.repository }}' | sed 's/.*\///' | sed 's/[^a-zA-Z0-9-]/-/g')"
+            echo "Using deterministic default: $COMPUTED_STACK_NAME"
+          fi
+          
+          # Ensure we never have an empty stack name
+          if [ -z "$COMPUTED_STACK_NAME" ]; then
+            echo "❌ Error: Computed stack name is empty"
             exit 1
           fi
-          echo "Using stack name: $STACK_NAME"
+          
+          echo "FINAL_STACK_NAME=$COMPUTED_STACK_NAME" >> $GITHUB_ENV
+          echo "Final stack name: $COMPUTED_STACK_NAME"
 
       - name: Deploy CloudFormation
         id: cfn
         run: |
           aws cloudformation deploy \
-            --stack-name "$STACK_NAME" \
+            --stack-name "$FINAL_STACK_NAME" \
             --template-file infra/apprunner.yaml \
             --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
             --no-fail-on-empty-changeset
-          URL=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" \
+          URL=$(aws cloudformation describe-stacks --stack-name "$FINAL_STACK_NAME" \
             --query 'Stacks[0].Outputs[?OutputKey==`ServiceUrl`].OutputValue' --output text)
           echo "service_url=$URL" >> $GITHUB_OUTPUT
 

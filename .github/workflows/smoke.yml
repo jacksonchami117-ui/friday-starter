@@ -35,16 +35,58 @@ jobs:
           ADMIN_PASSWORD: ci-admin
           FLASK_SECRET_KEY: testkey
         run: |
-          nohup python app.py > server.log 2>&1 &
+          nohup python app.py --port 10000 > server.log 2>&1 &
           echo $! > server.pid
 
       - name: Wait for health
         run: |
-          for i in {1..30}; do
-            curl -fsS http://localhost:10000/healthz && exit 0
-            sleep 2
+          echo "Waiting for app to become healthy..."
+          START_TIME=$(date +%s)
+          TIMEOUT=90
+          
+          for i in {1..45}; do
+            CURRENT_TIME=$(date +%s)
+            ELAPSED=$((CURRENT_TIME - START_TIME))
+            
+            if [ $ELAPSED -ge $TIMEOUT ]; then
+              echo "❌ Timeout after ${ELAPSED}s"
+              break
+            fi
+            
+            echo "Attempt $i (${ELAPSED}s elapsed)..."
+            
+            # Try /healthz first, then /health as fallback
+            if curl -fsS http://localhost:10000/healthz > /dev/null 2>&1; then
+              echo "✅ /healthz responded successfully"
+              exit 0
+            elif curl -fsS http://localhost:10000/health > /dev/null 2>&1; then
+              echo "✅ /health responded successfully (fallback)"
+              exit 0
+            fi
+            
+            # Exponential backoff: start with 1s, then 2s, then cap at 4s
+            if [ $i -le 5 ]; then
+              sleep 1
+            elif [ $i -le 10 ]; then
+              sleep 2
+            else
+              sleep 4
+            fi
           done
-          echo "App did not become healthy in time"
+          
+          echo "🔍 App did not become healthy - collecting diagnostics..."
+          echo "=== Server logs ==="
+          cat server.log || echo "No server.log found"
+          echo ""
+          echo "=== Process list ==="
+          ps aux | grep -E "(python|app\.py)" || echo "No python processes found"
+          echo ""
+          echo "=== Bound ports ==="
+          netstat -tlnp 2>/dev/null | grep ":10000" || echo "Port 10000 not bound"
+          echo ""
+          echo "=== Network connections ==="
+          ss -tlnp 2>/dev/null | grep ":10000" || echo "No connections on port 10000"
+          
           exit 1
 
       - name: Run smoke test

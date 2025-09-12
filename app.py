@@ -39,7 +39,7 @@ BUILD_HASH = str(int(time.time()))
 def diagnostics_selftest():
     """Run self-test hitting critical endpoints"""
     client = current_app.test_client()
-    endpoints = ["/health", "/", "/leads/", "/editor/", "/render/", "/exports/", "/diagnostics/"]
+    endpoints = ["/health", "/healthz", "/", "/leads/", "/editor/", "/render/", "/exports/", "/diagnostics/"]
     failures = []
     for ep in endpoints:
         resp = client.get(ep)
@@ -179,6 +179,10 @@ def create_app():
         def health():
             return "ok", 200
 
+        @app.route("/healthz")
+        def healthz():
+            return "ok", 200
+
         @app.route("/media/assets/<path:filename>")
         def media_assets(filename):
             if ADMIN_PASSWORD:
@@ -210,6 +214,15 @@ def create_app():
 # Create app instance for Gunicorn
 app = create_app()
 
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
+@click.command()
+@click.option('--port', type=int, help='Port to run the server on (overrides PORT env var)')
+def main(port):
+    """Run the Flask development server."""
+    # Precedence: CLI flag > PORT environment variable > default 5000
+    if port is None:
+        port = int(os.environ.get("PORT", 5000))
+    
     app.run(host="0.0.0.0", port=port)
+
+if __name__ == "__main__":
+    main()

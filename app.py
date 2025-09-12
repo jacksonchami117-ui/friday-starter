@@ -179,6 +179,10 @@ def create_app():
         def health():
             return "ok", 200
 
+        @app.route("/healthz")
+        def healthz():
+            return "ok", 200
+
         @app.route("/media/assets/<path:filename>")
         def media_assets(filename):
             if ADMIN_PASSWORD:
@@ -211,5 +215,11 @@ def create_app():
 app = create_app()
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
+    import argparse
+    parser = argparse.ArgumentParser(description='Friday App')
+    parser.add_argument('--port', type=int, help='Port to run the app on')
+    args = parser.parse_args()
+    
+    # Use --port argument if provided, fallback to PORT env var, then default 5000
+    port = args.port if args.port is not None else int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)

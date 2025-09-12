@@ -1,38 +1,38 @@
-name: Deploy — App Runner (CI-only)
+name: Deploy — App Runner (OIDC via AWS Connector)
 on:
   push: { branches: [ main ] }
   workflow_dispatch: {}
+  repository_dispatch:
+    types: [deploy]
+
 env:
   AWS_REGION: ${{ vars.AWS_REGION }}
   SERVICE_NAME: friday-app
   ENVIRONMENT: production
   ECR_REPO: ${{ vars.ECR_REPOSITORY }}
+  # ARN of the App Runner ECR access role (pre-created in AWS)
+  ECR_ACCESS_ROLE_ARN: ${{ vars.AWS_APPRUNNER_ECR_ACCESS_ROLE }}
+
 jobs:
-  build_and_push:
+  build_and_deploy:
     runs-on: ubuntu-latest
-    permissions: { id-token: write, contents: read }
+    permissions:
+      id-token: write   # required for GitHub OIDC
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
-      - name: Configure AWS (static keys if present)
-        if: ${{ secrets.AWS_ACCESS_KEY_ID != '' && secrets.AWS_SECRET_ACCESS_KEY != '' }}
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region:            ${{ env.AWS_REGION }}
-
-      - name: Configure AWS (OIDC fallback)
-        if: ${{ !(secrets.AWS_ACCESS_KEY_ID != '' && secrets.AWS_SECRET_ACCESS_KEY != '') }}
+      - name: Configure AWS via AWS Connector (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ vars.AWS_ROLE_DEPLOY }}
-          aws-region:    ${{ env.AWS_REGION }}
+          aws-region: ${{ env.AWS_REGION }}
 
       - id: ecr
+        name: Login to ECR
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build and push image
+      - name: Build and push image to ECR
         env:
           REG: ${{ steps.ecr.outputs.registry }}
           IMG: ${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPO }}:${{ github.sha }}
@@ -42,30 +42,25 @@ jobs:
           docker build -t "$IMG" .
           docker push "$IMG"
 
-      - name: Ensure App Runner ECR access role
-        id: apprunner_role
+      - name: Validate App Runner ECR access role is provided
         run: |
           set -euo pipefail
-          ROLE_NAME=FridayAppRunnerECRAccess
-          if ! aws iam get-role --role-name "$ROLE_NAME" >/dev/null 2>&1; then
-            aws iam create-role --role-name "$ROLE_NAME" --assume-role-policy-document '{
-              "Version":"2012-10-17","Statement":[
-                {"Effect":"Allow","Principal":{"Service":"build.apprunner.amazonaws.com"},"Action":"sts:AssumeRole"},
-                {"Effect":"Allow","Principal":{"Service":"tasks.apprunner.amazonaws.com"},"Action":"sts:AssumeRole"}]}'
-            aws iam attach-role-policy --role-name "$ROLE_NAME" --policy-arn arn:aws:iam::aws:policy/service-role/AWSAppRunnerServicePolicyForECRAccess || true
+          if [ -z "${ECR_ACCESS_ROLE_ARN}" ]; then
+            echo "ERROR: vars.AWS_APPRUNNER_ECR_ACCESS_ROLE is not set. Set it to the ARN of your App Runner ECR access role." >&2
+            exit 1
           fi
-          echo "ROLE_ARN=$(aws iam get-role --role-name "$ROLE_NAME" --query 'Role.Arn' --output text)" >> $GITHUB_OUTPUT
 
-      - name: Create/Update App Runner service
+      - name: Create or update App Runner service
         id: apprunner
         env:
           REG:      ${{ steps.ecr.outputs.registry }}
           IMG_TAG:  ${{ github.sha }}
-          ROLE_ARN: ${{ steps.apprunner_role.outputs.ROLE_ARN }}
+          ROLE_ARN: ${{ env.ECR_ACCESS_ROLE_ARN }}
         run: |
           set -euo pipefail
           SVC_NAME="${SERVICE_NAME}-${ENVIRONMENT}"
           IMAGE_URI="${REG}/${ECR_REPO}:${IMG_TAG}"
+
           SVC_ARN=$(aws apprunner list-services --query "ServiceSummaryList[?ServiceName=='${SVC_NAME}'].ServiceArn" --output text)
           if [ -z "$SVC_ARN" ] || [ "$SVC_ARN" = "None" ]; then
             SVC_ARN=$(aws apprunner create-service --service-name "$SVC_NAME" \
@@ -77,8 +72,9 @@ jobs:
           fi
           echo "SVC_ARN=$SVC_ARN" >> $GITHUB_OUTPUT
 
-      - name: Wait and smoke test
+      - name: Wait for deployment and smoke test
         run: |
+          set -euo pipefail
           ARN="${{ steps.apprunner.outputs.SVC_ARN }}"
           aws apprunner wait service-deployed --service-arn "$ARN"
           URL=$(aws apprunner describe-service --service-arn "$ARN" --query 'Service.ServiceUrl' --output text)

@@ -1,0 +1,198 @@
+name: Deploy — App Runner v2 (Enhanced CI)
+on:
+  push: { branches: [ main ] }
+  workflow_dispatch: {}
+  repository_dispatch:
+    types: [deploy]
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  SERVICE_NAME: friday-app
+  ENVIRONMENT: production
+  ECR_REPO: ${{ vars.ECR_REPOSITORY }}
+
+jobs:
+  build_and_deploy:
+    runs-on: ubuntu-latest
+    permissions: 
+      id-token: write
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS (static keys if present)
+        if: ${{ secrets.AWS_ACCESS_KEY_ID != '' && secrets.AWS_SECRET_ACCESS_KEY != '' }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region:            ${{ env.AWS_REGION }}
+
+      - name: Configure AWS (OIDC fallback)
+        if: ${{ !(secrets.AWS_ACCESS_KEY_ID != '' && secrets.AWS_SECRET_ACCESS_KEY != '') }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_DEPLOY }}
+          aws-region:    ${{ env.AWS_REGION }}
+
+      - id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push image
+        env:
+          REG: ${{ steps.ecr.outputs.registry }}
+          IMG: ${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPO }}:${{ github.sha }}
+        run: |
+          set -euo pipefail
+          aws ecr describe-repositories --repository-names "${ECR_REPO}" || aws ecr create-repository --repository-name "${ECR_REPO}"
+          docker build -t "$IMG" .
+          docker push "$IMG"
+
+      - name: Ensure App Runner ECR access role
+        id: apprunner_role
+        run: |
+          set -euo pipefail
+          ROLE_NAME=FridayAppRunnerECRAccess
+          if ! aws iam get-role --role-name "$ROLE_NAME" >/dev/null 2>&1; then
+            aws iam create-role --role-name "$ROLE_NAME" --assume-role-policy-document '{
+              "Version":"2012-10-17","Statement":[
+                {"Effect":"Allow","Principal":{"Service":"build.apprunner.amazonaws.com"},"Action":"sts:AssumeRole"},
+                {"Effect":"Allow","Principal":{"Service":"tasks.apprunner.amazonaws.com"},"Action":"sts:AssumeRole"}]}'
+            aws iam attach-role-policy --role-name "$ROLE_NAME" --policy-arn arn:aws:iam::aws:policy/service-role/AWSAppRunnerServicePolicyForECRAccess || true
+          fi
+          echo "ROLE_ARN=$(aws iam get-role --role-name "$ROLE_NAME" --query 'Role.Arn' --output text)" >> $GITHUB_OUTPUT
+
+      - name: Create/Update App Runner service
+        id: apprunner
+        env:
+          REG:      ${{ steps.ecr.outputs.registry }}
+          IMG_TAG:  ${{ github.sha }}
+          ROLE_ARN: ${{ steps.apprunner_role.outputs.ROLE_ARN }}
+        run: |
+          set -euo pipefail
+          SVC_NAME="${SERVICE_NAME}-${ENVIRONMENT}"
+          IMAGE_URI="${REG}/${ECR_REPO}:${IMG_TAG}"
+          SVC_ARN=$(aws apprunner list-services --query "ServiceSummaryList[?ServiceName=='${SVC_NAME}'].ServiceArn" --output text)
+          if [ -z "$SVC_ARN" ] || [ "$SVC_ARN" = "None" ]; then
+            SVC_ARN=$(aws apprunner create-service --service-name "$SVC_NAME" \
+              --source-configuration "ImageRepository={ImageIdentifier=${IMAGE_URI},ImageRepositoryType=ECR,ImageConfiguration={Port=5000}},AuthenticationConfiguration={AccessRoleArn=${ROLE_ARN}}" \
+              --query 'Service.ServiceArn' --output text)
+          else
+            aws apprunner update-service --service-arn "$SVC_ARN" \
+              --source-configuration "ImageRepository={ImageIdentifier=${IMAGE_URI},ImageRepositoryType=ECR,ImageConfiguration={Port=5000}},AuthenticationConfiguration={AccessRoleArn=${ROLE_ARN}}"
+          fi
+          echo "SVC_ARN=$SVC_ARN" >> $GITHUB_OUTPUT
+
+      - name: Wait for service to be healthy
+        id: wait_healthy
+        run: |
+          ARN="${{ steps.apprunner.outputs.SVC_ARN }}"
+          echo "Waiting for service to be deployed and healthy..."
+          aws apprunner wait service-deployed --service-arn "$ARN"
+          
+          # Get service URL
+          URL=$(aws apprunner describe-service --service-arn "$ARN" --query 'Service.ServiceUrl' --output text)
+          echo "SERVICE_URL=https://$URL" >> $GITHUB_OUTPUT
+          echo "Service deployed at: https://$URL"
+
+      - name: Health check verification
+        id: health_check
+        run: |
+          SERVICE_URL="${{ steps.wait_healthy.outputs.SERVICE_URL }}"
+          echo "Performing health check on: $SERVICE_URL/health"
+          
+          # Retry health check with backoff
+          for i in {1..5}; do
+            if curl -fsS "$SERVICE_URL/health" -o health_check.txt; then
+              echo "HEALTH_STATUS=healthy" >> $GITHUB_OUTPUT
+              echo "Health check passed on attempt $i"
+              break
+            else
+              echo "Health check failed on attempt $i, retrying in 30s..."
+              sleep 30
+              if [ $i -eq 5 ]; then
+                echo "HEALTH_STATUS=unhealthy" >> $GITHUB_OUTPUT
+                echo "Health check failed after 5 attempts"
+                exit 1
+              fi
+            fi
+          done
+
+      - name: Persist service URL as GitHub variable
+        run: |
+          SERVICE_URL="${{ steps.wait_healthy.outputs.SERVICE_URL }}"
+          echo "Setting FRIDAY_APP_URL variable to: $SERVICE_URL"
+          curl -X PATCH \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ github.token }}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            https://api.github.com/repos/${{ github.repository }}/actions/variables/FRIDAY_APP_URL \
+            -d "{\"name\":\"FRIDAY_APP_URL\",\"value\":\"$SERVICE_URL\"}" || \
+          curl -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ github.token }}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            https://api.github.com/repos/${{ github.repository }}/actions/variables \
+            -d "{\"name\":\"FRIDAY_APP_URL\",\"value\":\"$SERVICE_URL\"}"
+
+      - name: Create success issue with deployed URL
+        if: steps.health_check.outputs.HEALTH_STATUS == 'healthy'
+        run: |
+          SERVICE_URL="${{ steps.wait_healthy.outputs.SERVICE_URL }}"
+          COMMIT_SHA="${{ github.sha }}"
+          COMMIT_MSG=$(git log --format=%B -n 1 $COMMIT_SHA | head -1)
+          
+          ISSUE_BODY=$(cat << EOF
+          # 🚀 Deployment Successful!
+          
+          **Service URL:** $SERVICE_URL
+          
+          **Deployment Details:**
+          - **Commit:** [\`${COMMIT_SHA:0:7}\`](https://github.com/${{ github.repository }}/commit/$COMMIT_SHA)
+          - **Message:** $COMMIT_MSG
+          - **Triggered by:** ${{ github.event_name }}
+          - **Workflow:** ${{ github.workflow }}
+          - **Environment:** ${{ env.ENVIRONMENT }}
+          
+          **Health Status:** ✅ Healthy
+          
+          **Quick Links:**
+          - [Application]($SERVICE_URL)
+          - [Health Check]($SERVICE_URL/health)
+          - [Health Dashboard]($SERVICE_URL/health/ui)
+          
+          ---
+          *Automated deployment notification from GitHub Actions*
+          EOF
+          )
+          
+          curl -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ github.token }}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            https://api.github.com/repos/${{ github.repository }}/issues \
+            -d "{\"title\":\"🚀 App Runner Deployment Success - $(date +'%Y-%m-%d %H:%M UTC')\",\"body\":\"$ISSUE_BODY\",\"labels\":[\"deployment\",\"success\",\"app-runner\"]}"
+
+      - name: Upload health check artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: health-check-results
+          path: |
+            health_check.txt
+          retention-days: 30
+
+      - name: Deployment summary
+        run: |
+          SERVICE_URL="${{ steps.wait_healthy.outputs.SERVICE_URL }}"
+          echo "## 🎉 Deployment Complete!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Service URL:** $SERVICE_URL" >> $GITHUB_STEP_SUMMARY
+          echo "**Health Status:** ${{ steps.health_check.outputs.HEALTH_STATUS }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Service ARN:** ${{ steps.apprunner.outputs.SVC_ARN }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Quick Access Links" >> $GITHUB_STEP_SUMMARY
+          echo "- [🏠 Application]($SERVICE_URL)" >> $GITHUB_STEP_SUMMARY
+          echo "- [❤️ Health Check]($SERVICE_URL/health)" >> $GITHUB_STEP_SUMMARY
+          echo "- [📊 Health Dashboard]($SERVICE_URL/health/ui)" >> $GITHUB_STEP_SUMMARY

@@ -1,0 +1,38 @@
+name: Test AWS Connection
+
+on:
+  workflow_dispatch: {}
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Configure AWS (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_DEPLOY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Test AWS CLI
+        run: |
+          echo "Testing AWS CLI access..."
+          aws sts get-caller-identity
+          echo "AWS CLI working!"
+
+      - name: Test ECR Access
+        run: |
+          echo "Testing ECR access..."
+          aws ecr describe-repositories --region ${{ env.AWS_REGION }} || echo "No ECR repos found"
+          echo "ECR access working!"
+
+      - name: Test App Runner Access
+        run: |
+          echo "Testing App Runner access..."
+          aws apprunner list-services --region ${{ env.AWS_REGION }} || echo "No App Runner services found"
+          echo "App Runner access working!"

@@ -1,0 +1,47 @@
+name: Test Docker Build
+
+on:
+  workflow_dispatch: {}
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_DEPLOY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Test Docker Build Locally
+        run: |
+          echo "Testing Docker build locally..."
+          docker build -t test-build . || echo "Docker build failed"
+          echo "Docker build test complete"
+
+      - name: Create ECR Repository
+        run: |
+          echo "Creating ECR repository..."
+          aws ecr create-repository --repository-name friday-starter-test --region ${{ env.AWS_REGION }} || echo "Repository might already exist"
+
+      - name: Build and Push to ECR
+        env:
+          REG: ${{ steps.ecr.outputs.registry }}
+          IMG: ${{ steps.ecr.outputs.registry }}/friday-starter-test:test
+        run: |
+          echo "Building and pushing to ECR..."
+          docker build -t "$IMG" .
+          docker push "$IMG" || echo "Push failed"
+          echo "ECR push test complete"

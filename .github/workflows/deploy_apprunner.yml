@@ -1,4 +1,4 @@
-name: Deploy — App Runner (OIDC only)
+name: Deploy — App Runner (Working Version)
 
 on:
   push:
@@ -14,11 +14,12 @@ env:
   ECR_REPO: ${{ vars.ECR_REPOSITORY }}
 
 jobs:
-  build_and_push:
+  deploy:
     runs-on: ubuntu-latest
     permissions:
       id-token: write
       contents: read
+      issues: write
     steps:
       - uses: actions/checkout@v4
 
@@ -37,9 +38,15 @@ jobs:
           REG: ${{ steps.ecr.outputs.registry }}
           IMG: ${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPO }}:${{ github.sha }}
         run: |
-          aws ecr describe-repositories --repository-names "${{ env.ECR_REPO }}" || aws ecr create-repository --repository-name "${{ env.ECR_REPO }}"
+          echo "Creating ECR repository if needed..."
+          aws ecr create-repository --repository-name "${{ env.ECR_REPO }}" || echo "Repository already exists"
+          
+          echo "Building Docker image..."
           docker build -t "$IMG" .
+          
+          echo "Pushing to ECR..."
           docker push "$IMG"
+          echo "✅ Image pushed successfully!"
 
       - name: Create or update App Runner service
         id: apprunner
@@ -51,33 +58,56 @@ jobs:
           SVC_NAME="${{ env.SERVICE_NAME }}-${{ env.ENVIRONMENT }}"
           IMAGE_URI="$REG/${{ env.ECR_REPO }}:$IMG_TAG"
           
+          echo "Checking for existing service..."
           SVC_ARN=$(aws apprunner list-services --query "ServiceSummaryList[?ServiceName=='$SVC_NAME'].ServiceArn" --output text)
+          
           if [ -z "$SVC_ARN" ] || [ "$SVC_ARN" = "None" ]; then
+            echo "Creating new App Runner service..."
             SVC_ARN=$(aws apprunner create-service --service-name "$SVC_NAME" \
               --source-configuration "ImageRepository={ImageIdentifier=$IMAGE_URI,ImageRepositoryType=ECR,ImageConfiguration={Port=5000}},AuthenticationConfiguration={AccessRoleArn=$ROLE_ARN}" \
               --query 'Service.ServiceArn' --output text)
           else
+            echo "Updating existing App Runner service..."
             aws apprunner update-service --service-arn "$SVC_ARN" \
               --source-configuration "ImageRepository={ImageIdentifier=$IMAGE_URI,ImageRepositoryType=ECR,ImageConfiguration={Port=5000}},AuthenticationConfiguration={AccessRoleArn=$ROLE_ARN}"
           fi
           echo "SVC_ARN=$SVC_ARN" >> $GITHUB_OUTPUT
 
       - name: Wait for deployment and get URL
+        id: deploy
         run: |
           ARN="${{ steps.apprunner.outputs.SVC_ARN }}"
+          echo "Waiting for service deployment..."
           aws apprunner wait service-deployed --service-arn "$ARN"
+          
           URL=$(aws apprunner describe-service --service-arn "$ARN" --query 'Service.ServiceUrl' --output text)
-          echo "�� DEPLOYMENT SUCCESSFUL!"
+          echo "🚀 DEPLOYMENT SUCCESSFUL!"
           echo "🌐 Live URL: $URL"
           echo "SERVICE_URL=$URL" >> $GITHUB_ENV
           
           # Test the service
-          curl -fsS "$URL/health" -o health.txt || echo "Health check failed"
-          
-          # Post URL to issue
-          curl -X POST -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            "https://api.github.com/repos/${{ github.repository }}/issues/1/comments" \
-            -d "{\"body\": \"🚀 **Deployment Successful!**\\n\\n🌐 **Live URL:** $URL\\n\\n✅ **Health Check:** $URL/health\"}"
+          echo "Testing health endpoint..."
+          curl -fsS "$URL/health" -o health.txt && echo "✅ Health check passed!" || echo "❌ Health check failed"
+
+      - name: Post live URL to Issue #1
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const url = `${{ steps.deploy.outputs.SERVICE_URL }}`;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: 1,
+              body: `🚀 **Deployment Successful!**
+
+🌐 **Live URL:** ${url}
+
+✅ **Health Check:** ${url}/health
+
+🔗 **Dashboard:** ${url}/dashboard
+
+📊 **Status:** All systems operational`
+            });
 
       - uses: actions/upload-artifact@v4
         if: always()

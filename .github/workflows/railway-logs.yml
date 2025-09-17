@@ -1,0 +1,47 @@
+name: Railway Logs & Health
+on:
+  push:
+    branches: [ "main" ]
+  schedule:
+    - cron: "*/30 * * * *"   # every 30 min
+  workflow_dispatch: {}
+
+jobs:
+  fetch-logs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: curl -fsSL https://railway.app/install.sh | sh
+
+      - name: Fetch Logs
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
+          RAILWAY_SERVICE_ID: ${{ secrets.RAILWAY_SERVICE_ID }}
+        run: |
+          ~/.railway/bin/railway link --project $RAILWAY_PROJECT_ID --service $RAILWAY_SERVICE_ID
+          ~/.railway/bin/railway logs --service $RAILWAY_SERVICE_ID --lines 200 > latest.log || echo "No logs found" > latest.log
+
+      - name: Health Check
+        run: |
+          curl -s -o health.log -w "HTTP %{http_code}\n" https://web-production-a4552.up.railway.app/health || echo "Health check failed" > health.log
+
+      - name: Comment to GitHub Issue
+        uses: peter-evans/create-or-update-comment@v3
+        with:
+          issue-number: 1
+          body: |
+            ### 🔄 Railway Deployment Status
+            **Time:** ${{ github.run_id }}
+
+            **Health Check Result:**
+            ```
+            $(cat health.log)
+            ```
+
+            **Last 200 Log Lines:**
+            ```
+            $(cat latest.log)
+            ```

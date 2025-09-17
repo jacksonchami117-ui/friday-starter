@@ -1,0 +1,16 @@
+name: /merge
+on:
+  issue_comment:
+    types: [created]
+jobs:
+  merge:
+    if: github.event.issue.pull_request != null && contains(github.event.comment.body, '/merge')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Merge PR
+        env:
+          GH_TOKEN: ${{ secrets.GH_WORKFLOW_TOKEN }}
+        run: gh pr merge ${{ github.event.issue.number }} --merge --delete-branch --admin

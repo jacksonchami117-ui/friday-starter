@@ -1,0 +1,74 @@
+queue_rules:
+  - name: default
+    conditions:
+      - check-success=build
+      - check-success=coverage
+      - check-success=sonar
+      - check-success=trivy
+
+pull_request_rules:
+  # Auto-merge Renovate PRs after CI passes and approval
+  - name: Automatically merge Renovate PRs with successful CI
+    conditions:
+      - author=renovate[bot]
+      - check-success=build
+      - check-success=coverage
+      - check-success=sonar
+      - check-success=trivy
+      - label=dependencies
+      - "#approved-reviews-by>=1"
+    actions:
+      queue:
+        name: default
+        method: merge
+
+  # Auto-merge patch/minor dependency updates without manual approval
+  - name: Auto-merge patch and minor dependency updates
+    conditions:
+      - author=renovate[bot]
+      - check-success=build
+      - check-success=coverage  
+      - check-success=sonar
+      - check-success=trivy
+      - label=dependencies
+      - -label=major-update
+      - title~=^(fix|chore)\(deps\)
+    actions:
+      queue:
+        name: default
+        method: merge
+
+  # Queue approved PRs with successful CI
+  - name: Queue approved PRs
+    conditions:
+      - "#approved-reviews-by>=1"
+      - check-success=build
+      - check-success=coverage
+      - check-success=sonar
+      - check-success=trivy
+      - -draft
+    actions:
+      queue:
+        name: default
+        method: merge
+
+  # Auto-approve minor dependency updates
+  - name: Auto-approve minor dependency updates
+    conditions:
+      - author=renovate[bot]
+      - label=dependencies
+      - -label=major-update
+    actions:
+      review:
+        type: APPROVE
+        message: "Auto-approving minor dependency update"
+
+# Example backport rule (commented out)
+# - name: Backport patches to release branch
+#   conditions:
+#     - merged
+#     - label=backport-to-release
+#   actions:
+#     backport:
+#       branches:
+#         - release

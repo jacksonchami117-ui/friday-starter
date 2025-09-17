@@ -9,8 +9,8 @@ WORKDIR /app
 # Ensure Python can find src package
 ENV PYTHONPATH=/app:/app/src
 
-RUN --mount=type=cache,target=/var/cache/apt \
-    --mount=type=cache,target=/var/lib/apt \
+RUN --mount=type=cache,id=apt-cache,target=/var/cache/apt \
+    --mount=type=cache,id=apt-lib,target=/var/lib/apt \
     apt-get update -y && apt-get install -y --no-install-recommends \
     ffmpeg \
     fonts-dejavu-core \
@@ -20,7 +20,7 @@ RUN --mount=type=cache,target=/var/cache/apt \
 # Enforce wheel-only installs and use requirements.lock
 ENV PIP_ONLY_BINARY=:all:
 COPY requirements.lock .
-RUN --mount=type=cache,target=/root/.cache/pip \
+RUN --mount=type=cache,id=pip-cache,target=/root/.cache/pip \
     pip install --upgrade pip setuptools wheel && \
     pip install --no-cache-dir -r requirements.lock
 

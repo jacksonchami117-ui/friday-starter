@@ -9,10 +9,7 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 # Import your models here
-from src.db import Base
-from src.leads import Lead
-from src.orders import Order
-from src.user import User
+from src.db import Base, Lead, Order, User
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

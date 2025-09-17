@@ -1,0 +1,24 @@
+{
+  "apps": {
+    "dependabot": { "installed": true, "notes": "Native; configured via .github/dependabot.yml" },
+    "codeql": { "installed": true, "notes": "Native; configured via workflow" },
+    "snyk": { "installed": false, "requires": ["SNYK_TOKEN"], "notes": "Install GitHub App; workflow present" }
+  },
+  "workflows": {
+    "deploy_app_runner": {
+      "name": "Deploy — App Runner (CI-only)",
+      "path": ".github/workflows/deploy_apprunner.yml",
+      "outputs": ["SERVICE_URL"],
+      "notes": "GitHub comment notifier hooks into this via workflow_run trigger"
+    },
+    "codeql": { "path": ".github/workflows/codeql.yml" },
+    "snyk": { "path": ".github/workflows/snyk.yml" },
+    "notify_deploy_github": { "path": ".github/workflows/notify-deploy-github.yml" }
+  },
+  "secrets": ["SNYK_TOKEN"],
+  "variables": ["AWS_REGION", "ECR_REPOSITORY", "AWS_ROLE_DEPLOY"],
+  "notes": [
+    "Slack is intentionally not used; deploy notifications are posted as PR/commit comments.",
+    "All new checks are non-blocking by default."
+  ]
+}

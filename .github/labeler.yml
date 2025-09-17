@@ -1,0 +1,31 @@
+docs:
+  - changed-files:
+    - any-glob-to-any-file: ['docs/**', '*.md', 'SECURITY.md']
+
+tests:
+  - changed-files:
+    - any-glob-to-any-file: ['tests/**', '**/*test*']
+
+ci:
+  - changed-files:
+    - any-glob-to-any-file: ['.github/**', '*.yml', '*.yaml', 'Dockerfile*', 'docker-compose*', 'requirements.txt', 'package.json']
+
+dependencies:
+  - changed-files:
+    - any-glob-to-any-file: ['requirements.txt', 'package.json', 'package-lock.json', 'yarn.lock']
+
+frontend:
+  - changed-files:
+    - any-glob-to-any-file: ['static/**', 'templates/**', '*.js', '*.ts', '*.css', '*.scss', '*.html']
+
+backend:
+  - changed-files:
+    - any-glob-to-any-file: ['src/**', 'app.py', '*.py', 'migrations/**']
+
+config:
+  - changed-files:
+    - any-glob-to-any-file: ['*.yml', '*.yaml', '*.json', '*.ini', '*.cfg', '.env*', 'render.yaml']
+
+docker:
+  - changed-files:
+    - any-glob-to-any-file: ['Dockerfile*', 'docker-compose*', '.dockerignore']

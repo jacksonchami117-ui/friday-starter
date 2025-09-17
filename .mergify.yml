@@ -1,0 +1,42 @@
+queue_rules:
+  - name: default
+    conditions:
+      - "#approved-reviews-by>=1"
+
+pull_request_rules:
+  - name: Automatic merge for Renovate PRs
+    conditions:
+      - author=renovate[bot]
+      - check-success=build
+      - check-success=coverage  
+      - check-success=sonar
+      - check-success=trivy
+      - label=dependencies
+      - "#approved-reviews-by>=1"
+    actions:
+      queue:
+        name: default
+        method: merge
+
+  - name: Add to merge queue when ready
+    conditions:
+      - "#approved-reviews-by>=1"
+      - check-success=build
+      - check-success=coverage
+      - check-success=sonar 
+      - check-success=trivy
+      - base=main
+    actions:
+      queue:
+        name: default
+        method: merge
+
+  # Example backport rule (commented out)
+  # - name: backport patches to release branch
+  #   conditions:
+  #     - merged
+  #     - label=backport-to-release
+  #   actions:
+  #     backport:
+  #       branches:
+  #         - release

@@ -1,0 +1,65 @@
+name: Trivy Security Scan
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '30 1 * * 0'  # Weekly on Sunday
+
+concurrency:
+  group: trivy-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  trivy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner in filesystem mode
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-fs-results.sarif'
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-fs-results.sarif'
+
+      # Optional: Docker scan if Dockerfile exists
+      - name: Check if Dockerfile exists
+        id: dockerfile_check
+        run: |
+          if [ -f "Dockerfile" ]; then
+            echo "dockerfile_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "dockerfile_exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build Docker image for scanning
+        if: steps.dockerfile_check.outputs.dockerfile_exists == 'true'
+        run: docker build -t friday-starter:${{ github.sha }} .
+
+      - name: Run Trivy vulnerability scanner on Docker image
+        if: steps.dockerfile_check.outputs.dockerfile_exists == 'true'
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'friday-starter:${{ github.sha }}'
+          format: 'sarif'
+          output: 'trivy-docker-results.sarif'
+
+      - name: Upload Trivy Docker scan results to GitHub Security tab
+        if: steps.dockerfile_check.outputs.dockerfile_exists == 'true'
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-docker-results.sarif'

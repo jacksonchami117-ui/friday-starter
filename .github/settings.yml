@@ -1,0 +1,127 @@
+# Repository settings as code
+# This file will be processed by the Settings app when installed
+# https://github.com/apps/settings
+
+repository:
+  # Repository settings
+  name: friday-starter
+  description: "FRIDAY Starter - Flask-based video personalization platform with automation and quality tooling"
+  homepage: ""
+  topics: "flask, video-processing, celery, python, automation, ci-cd"
+  private: false
+  has_issues: true
+  has_projects: true
+  has_wiki: false
+  has_downloads: true
+  default_branch: main
+  allow_squash_merge: true
+  allow_merge_commit: false
+  allow_rebase_merge: false
+  delete_branch_on_merge: true
+  enable_automated_security_fixes: true
+  enable_vulnerability_alerts: true
+
+# Branch protection rules
+branches:
+  - name: main
+    protection:
+      required_status_checks:
+        strict: true
+        contexts:
+          - "build"
+          - "coverage" 
+          - "sonar"
+          - "trivy"
+      enforce_admins: false
+      required_pull_request_reviews:
+        required_approving_review_count: 1
+        dismiss_stale_reviews: true
+        require_code_owner_reviews: true
+        require_last_push_approval: true
+      restrictions: null
+      required_linear_history: false
+      allow_force_pushes: false
+      allow_deletions: false
+      required_conversation_resolution: true
+
+# Labels for issues and pull requests
+labels:
+  # Type labels
+  - name: "bug"
+    color: "d73a4a"
+    description: "Something isn't working"
+  - name: "feature"
+    color: "0075ca"
+    description: "New feature or request"
+  - name: "enhancement"
+    color: "0075ca"
+    description: "Enhancement to existing functionality"
+  - name: "fix"
+    color: "d73a4a"
+    description: "Bug fix"
+  - name: "chore"
+    color: "fef2c0"
+    description: "Maintenance and housekeeping"
+  - name: "security"
+    color: "b60205"
+    description: "Security-related changes"
+  
+  # Category labels
+  - name: "dependencies"
+    color: "0366d6"
+    description: "Updates to dependencies"
+  - name: "docs"
+    color: "0075ca"
+    description: "Improvements or additions to documentation"
+  - name: "tests"
+    color: "0e8a16"
+    description: "Testing related changes"
+  - name: "ci"
+    color: "0e8a16"
+    description: "CI/CD related changes"
+  - name: "frontend"
+    color: "ff6b6b"
+    description: "Frontend related changes"
+  - name: "backend"
+    color: "4ecdc4"
+    description: "Backend related changes"
+  - name: "config"
+    color: "fef2c0"
+    description: "Configuration changes"
+  - name: "docker"
+    color: "0db7ed"
+    description: "Docker related changes"
+
+  # Priority labels
+  - name: "priority: low"
+    color: "009688"
+    description: "Low priority"
+  - name: "priority: medium"
+    color: "ffeb3b"
+    description: "Medium priority"
+  - name: "priority: high"
+    color: "ff9800"
+    description: "High priority"
+  - name: "priority: critical"
+    color: "f44336"
+    description: "Critical priority"
+
+  # Status labels
+  - name: "triage"
+    color: "fbca04"
+    description: "Needs triage"
+  - name: "good first issue"
+    color: "7057ff"
+    description: "Good for newcomers"
+  - name: "help wanted"
+    color: "008672"
+    description: "Extra attention is needed"
+  - name: "wontfix"
+    color: "ffffff"
+    description: "This will not be worked on"
+  - name: "duplicate"
+    color: "cfd3d7"
+    description: "This issue or pull request already exists"
+  - name: "invalid"
+    color: "e4e669"
+    description: "This doesn't seem right"
